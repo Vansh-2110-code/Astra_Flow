@@ -1,14 +1,16 @@
 
 import React from 'react';
 import { Search, Bell } from 'lucide-react';
-import Button from '../ui/Button';
+import { useParams } from 'react-router-dom';
+import WorkspaceSwitcher from '../WorkspaceSwitcher';
 
 const Topbar = () => {
+    const { workspaceId } = useParams();
+
     return (
         <header className="topbar">
-            {/* Left Side - now cleaner without redundant workspace selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                {/* Potentially Add Breadcrumbs here later if needed */}
+                <WorkspaceSwitcher currentWorkspaceId={workspaceId} />
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>

@@ -4,8 +4,6 @@ import { NavLink, useParams } from 'react-router-dom';
 import {
     LayoutDashboard,
     FileText,
-    Calendar,
-    Grid,
     CheckSquare,
     Image,
     BarChart2,
@@ -18,10 +16,8 @@ const Sidebar = () => {
     const baseUrl = `/workspace/${workspaceId}`;
 
     const navItems = [
-        { icon: LayoutDashboard, label: 'Dashboard', path: `${baseUrl}/dashboard` }, // Mapping Dashboard to Content/Feed as per request implication or separate
+        { icon: LayoutDashboard, label: 'Dashboard', path: `${baseUrl}/dashboard` },
         { icon: FileText, label: 'Content', path: `${baseUrl}/content` },
-        { icon: Calendar, label: 'Calendar', path: `${baseUrl}/calendar` },
-        { icon: Grid, label: 'Grid View', path: `${baseUrl}/grid` },
         { icon: CheckSquare, label: 'Approvals', path: `${baseUrl}/approvals` },
         { icon: Image, label: 'Media Library', path: `${baseUrl}/media` },
         { icon: BarChart2, label: 'Analytics', path: `${baseUrl}/analytics` },

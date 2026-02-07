@@ -16,7 +16,7 @@ export const posts = [
         content: "Excited to announce our new feature drop! 🚀 #LaunchDay #NewFeature",
         media: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=500&auto=format&fit=crop&q=60",
         date: "2024-03-15",
-        status: "Approved",
+        status: "Published",
         author: "Sarah J."
     },
     {
@@ -26,7 +26,7 @@ export const posts = [
         content: "What's the one tool you can't live without as a developer? 👇",
         media: null,
         date: "2024-03-16",
-        status: "Draft",
+        status: "Drafts",
         author: "Mike T."
     },
     {
@@ -36,7 +36,7 @@ export const posts = [
         content: "Join us for a webinar on the future of AI in marketing. Link in bio.",
         media: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop&q=60",
         date: "2024-03-18",
-        status: "Pending Approval",
+        status: "Drafts",
         author: "Jessica B."
     },
     {
