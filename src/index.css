@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
+@import './styles/components.css';
+@import './styles/dashboard.css';
+
+:root {
+  --font-body: 'Inter', sans-serif;
+  --font-heading: 'Poppins', sans-serif;
+
+  /* Premium Gradient Palette */
+  --color-primary: #6366f1;
+  /* Indigo */
+  --color-secondary: #ec4899;
+  /* Pink */
+  --color-accent: #8b5cf6;
+  /* Violet */
+
+  --bg-gradient: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 50%, #fce7f3 100%);
+  --bg-shape-1: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%);
+  --bg-shape-2: radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 40%);
+
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  --glass-blur: blur(12px);
+
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+
+  --input-bg: rgba(255, 255, 255, 0.6);
+  --input-border: #e5e7eb;
+  --input-focus: #6366f1;
+  --input-error: #ef4444;
+  --input-success: #10b981;
+
+  --bg-hover: rgba(0, 0, 0, 0.03);
+
+  --radius-lg: 24px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+  /* For full coverage */
+  color: var(--text-main);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* Background flourishes */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::before {
+  background: var(--bg-shape-1);
+}
+
+body::after {
+  background: var(--bg-shape-2);
+}
+
+button {
+  font-family: var(--font-body);
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  text-decoration: underline;
+  color: var(--color-accent);
+}
