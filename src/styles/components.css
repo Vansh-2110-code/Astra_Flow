@@ -120,6 +120,8 @@
 .badge-scheduled { background: #dbeafe; color: #2563eb; }
 .badge-published { background: #e0e7ff; color: #4f46e5; }
 .badge-rejected { background: #fee2e2; color: #dc2626; }
+.badge-active { background: #d1fae5; color: #059669; }
+.badge-invited { background: #fef3c7; color: #d97706; }
 
 /* Avatars */
 .avatar {
