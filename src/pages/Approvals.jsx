@@ -1,14 +1,15 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import PostCard from '../components/PostCard';
 import Button from '../components/ui/Button';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronDown, Calendar } from 'lucide-react';
 import { posts } from '../data/mockData';
 
 const Approvals = () => {
-    // Filter only pending posts for this view
     const pendingPosts = posts.filter(p => p.status === 'Pending Approval');
+    // Plannable-like: separate approve options; which post has approve menu open (visual only).
+    const [approveMenuOpen, setApproveMenuOpen] = useState(null);
 
     return (
         <DashboardLayout>
@@ -29,13 +30,34 @@ const Approvals = () => {
                         pendingPosts.map(post => (
                             <div key={post.id} style={{ position: 'relative' }}>
                                 <PostCard post={post} />
-                                <div className="card" style={{ marginTop: '-1rem', marginBottom: '2rem', borderTopLeftRadius: 0, borderTopRightRadius: 0, background: '#f9fafb', borderTop: 'none', display: 'flex', gap: '1rem', padding: '1rem' }}>
-                                    <Button variant="primary" style={{ background: '#10b981', flex: 1 }}>
-                                        <CheckCircle size={18} /> Approve
-                                    </Button>
-                                    <Button variant="danger" style={{ flex: 1 }}>
-                                        <XCircle size={18} /> Reject
-                                    </Button>
+                                <div className="card" style={{ marginTop: '-1rem', marginBottom: '2rem', borderTopLeftRadius: 0, borderTopRightRadius: 0, background: '#f9fafb', borderTop: 'none', padding: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                        <Button variant="primary" style={{ background: '#10b981' }}>
+                                            <CheckCircle size={18} /> Approve
+                                        </Button>
+                                        <div style={{ position: 'relative' }}>
+                                            <Button
+                                                variant="outline"
+                                                style={{ minWidth: '140px' }}
+                                                onClick={() => setApproveMenuOpen(approveMenuOpen === post.id ? null : post.id)}
+                                            >
+                                                Approve options <ChevronDown size={14} />
+                                            </Button>
+                                            {approveMenuOpen === post.id && (
+                                                <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', background: 'white', border: '1px solid var(--input-border)', borderRadius: 'var(--radius-sm)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, minWidth: '180px' }}>
+                                                    <button type="button" className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', gap: '0.5rem', fontSize: '0.9rem' }} onClick={() => setApproveMenuOpen(null)}>
+                                                        <CheckCircle size={16} /> Approve
+                                                    </button>
+                                                    <button type="button" className="btn btn-ghost" style={{ width: '100%', justifyContent: 'flex-start', gap: '0.5rem', fontSize: '0.9rem' }} onClick={() => setApproveMenuOpen(null)}>
+                                                        <Calendar size={16} /> Approve & Schedule
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <Button variant="danger">
+                                            <XCircle size={18} /> Reject
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         ))

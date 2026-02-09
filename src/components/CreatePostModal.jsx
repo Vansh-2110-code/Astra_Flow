@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Card from './ui/Card';
 import Button from './ui/Button';
 import PlatformRulesModal from './PlatformRulesModal';
 import { X, Upload, Image as ImageIcon, Calendar, Clock, Facebook, Instagram, Twitter, Linkedin, Info, FileText } from 'lucide-react';
+
+// Added: Compact font size to match Plannable UX. Max caption length for character count (visual only).
+const CAPTION_MAX_LENGTH = 2200;
+// Added: Selected accounts preview – mocked from Connected Apps; visual only.
+const MOCK_SELECTED_ACCOUNTS = ['@main_account', '@page1'];
 
 const CreatePostModal = ({ isOpen, onClose }) => {
     const [selectedPlatforms, setSelectedPlatforms] = useState(['Instagram']);
@@ -11,6 +16,34 @@ const CreatePostModal = ({ isOpen, onClose }) => {
     const [showRules, setShowRules] = useState(false);
     const [caption, setCaption] = useState('');
     const [media, setMedia] = useState(null);
+    // Added UX enhancement – non-breaking: loading and draft/error mock UI only
+    const [isPosting, setIsPosting] = useState(false);
+    const [showDraftSaved, setShowDraftSaved] = useState(false);
+    const captionRef = useRef(null);
+
+    // Added UX enhancement – non-breaking: auto-focus caption when modal opens
+    useEffect(() => {
+        if (isOpen && captionRef.current) {
+            const t = setTimeout(() => captionRef.current?.focus(), 100);
+            return () => clearTimeout(t);
+        }
+    }, [isOpen]);
+
+    // Added UX enhancement – non-breaking: keyboard shortcut hint (Ctrl/Cmd+Enter) – visual hint only; optional trigger
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                if (caption.trim()) {
+                    setIsPosting(true);
+                    setTimeout(() => setIsPosting(false), 1500);
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, caption]);
 
     if (!isOpen) return null;
 
@@ -165,22 +198,23 @@ const CreatePostModal = ({ isOpen, onClose }) => {
             
             <Card className="modal-content" style={{ 
                 width: '100%', 
-                maxWidth: '900px', 
+                maxWidth: '720px', 
                 background: 'white', 
-                maxHeight: '90vh', 
+                maxHeight: '88vh', 
                 overflowY: 'auto',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                padding: '1.25rem'
             }}>
                 <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'space-between', 
-                    marginBottom: '1.5rem', 
+                    marginBottom: '1rem', 
                     borderBottom: '1px solid var(--input-border)', 
-                    paddingBottom: '1rem' 
+                    paddingBottom: '0.75rem' 
                 }}>
-                    <h2 className="text-h3">Create New Post</h2>
+                    <h2 className="text-h3" style={{ fontSize: '1.1rem' }}>Create New Post</h2>
                     <button 
                         onClick={onClose} 
                         style={{ 
@@ -203,16 +237,16 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: '2rem', flex: 1 }}>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', gap: '1.25rem', flex: 1 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div>
                             <div style={{ 
                                 display: 'flex', 
                                 alignItems: 'center', 
                                 justifyContent: 'space-between',
-                                marginBottom: '0.75rem' 
+                                marginBottom: '0.5rem' 
                             }}>
-                                <label style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                                <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>
                                     Select Platforms
                                 </label>
                                 <button
@@ -255,19 +289,19 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                                                 flexDirection: 'column',
                                                 alignItems: 'center',
                                                 gap: '0.5rem',
-                                                padding: '0.75rem 1rem',
+                                                padding: '0.5rem 0.75rem',
                                                 border: `2px solid ${isSelected ? 'var(--color-primary)' : 'var(--input-border)'}`,
                                                 borderRadius: 'var(--radius-md)',
                                                 background: isSelected ? 'rgba(99, 102, 241, 0.05)' : 'white',
                                                 cursor: 'pointer',
                                                 flex: '1 1 auto',
-                                                minWidth: '100px',
+                                                minWidth: '80px',
                                                 transition: 'all 0.2s'
                                             }}
                                         >
-                                            <Icon size={20} color={isSelected ? p.color : 'var(--text-muted)'} />
+                                            <Icon size={18} color={isSelected ? p.color : 'var(--text-muted)'} />
                                             <span style={{ 
-                                                fontSize: '0.8rem', 
+                                                fontSize: '0.75rem', 
                                                 fontWeight: 500, 
                                                 color: isSelected ? 'var(--text-main)' : 'var(--text-muted)' 
                                             }}>
@@ -277,34 +311,38 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                                     );
                                 })}
                             </div>
+                            {/* Added: Selected accounts preview from Connected Apps – mocked; visual only. */}
+                            <div className="text-sm text-muted" style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
+                                Posting to: {MOCK_SELECTED_ACCOUNTS.join(', ')}
+                            </div>
                         </div>
 
                         {selectedPlatforms.length > 0 && (
                             <div>
                                 <label style={{ 
                                     fontWeight: 600, 
-                                    fontSize: '0.9rem', 
+                                    fontSize: '0.85rem', 
                                     display: 'block',
-                                    marginBottom: '0.75rem' 
+                                    marginBottom: '0.5rem' 
                                 }}>
                                     Post Type per Platform
                                 </label>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     {selectedPlatforms.map(platformName => {
                                         const platform = connectedPlatforms.find(p => p.name === platformName);
                                         return (
                                             <div key={platformName} style={{ 
                                                 display: 'flex', 
                                                 alignItems: 'center', 
-                                                gap: '1rem',
-                                                padding: '0.75rem',
+                                                gap: '0.75rem',
+                                                padding: '0.5rem',
                                                 background: 'rgba(0, 0, 0, 0.02)',
                                                 borderRadius: 'var(--radius-sm)'
                                             }}>
                                                 <span style={{ 
-                                                    fontSize: '0.85rem', 
+                                                    fontSize: '0.8rem', 
                                                     fontWeight: 500,
-                                                    minWidth: '80px'
+                                                    minWidth: '72px'
                                                 }}>
                                                     {platformName}
                                                 </span>
@@ -314,13 +352,13 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                                                             key={type}
                                                             onClick={() => handlePostTypeChange(platformName, type)}
                                                             style={{
-                                                                padding: '0.5rem 1rem',
+                                                                padding: '0.4rem 0.75rem',
                                                                 border: `1px solid ${postTypes[platformName] === type ? 'var(--color-primary)' : 'var(--input-border)'}`,
                                                                 borderRadius: '20px',
                                                                 background: postTypes[platformName] === type ? 'rgba(99, 102, 241, 0.1)' : 'white',
                                                                 color: postTypes[platformName] === type ? 'var(--color-primary)' : 'var(--text-muted)',
                                                                 cursor: 'pointer',
-                                                                fontSize: '0.8rem',
+                                                                fontSize: '0.75rem',
                                                                 fontWeight: 500,
                                                                 transition: 'all 0.2s'
                                                             }}
@@ -339,32 +377,37 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                         <div>
                             <label style={{ 
                                 fontWeight: 600, 
-                                fontSize: '0.9rem', 
+                                fontSize: '0.85rem', 
                                 display: 'block',
-                                marginBottom: '0.75rem' 
+                                marginBottom: '0.5rem' 
                             }}>
                                 Caption
                             </label>
                             <textarea
+                                ref={captionRef}
                                 value={caption}
                                 onChange={(e) => setCaption(e.target.value)}
                                 className="input"
                                 placeholder="Write your caption here..."
-                                rows={5}
-                                style={{ resize: 'none', fontFamily: 'inherit' }}
+                                rows={4}
+                                style={{ resize: 'none', fontFamily: 'inherit', padding: '0.6rem 0.75rem', fontSize: '0.85rem' }}
                             />
+                            {/* Added: Compact font size to match Plannable UX. Character count (visual only). */}
+                            <div className="text-sm text-muted" style={{ marginTop: '0.5rem' }}>
+                                {caption.length} / {CAPTION_MAX_LENGTH}
+                            </div>
                         </div>
 
                         <div>
                             <label style={{ 
                                 fontWeight: 600, 
-                                fontSize: '0.9rem', 
+                                fontSize: '0.85rem', 
                                 display: 'block',
-                                marginBottom: '0.75rem' 
+                                marginBottom: '0.5rem' 
                             }}>
                                 Media
                             </label>
-                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <label style={{ flex: 1 }}>
                                     <input
                                         type="file"
@@ -395,61 +438,61 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <div style={{ flex: 1 }}>
                                 <label style={{ 
                                     fontWeight: 600, 
-                                    fontSize: '0.9rem', 
+                                    fontSize: '0.85rem', 
                                     display: 'block',
-                                    marginBottom: '0.75rem' 
+                                    marginBottom: '0.5rem' 
                                 }}>
                                     Schedule Date
                                 </label>
                                 <input 
                                     type="date" 
                                     className="input"
-                                    style={{ padding: '0.75rem' }}
+                                    style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
                                 />
                             </div>
                             <div style={{ flex: 1 }}>
                                 <label style={{ 
                                     fontWeight: 600, 
-                                    fontSize: '0.9rem', 
+                                    fontSize: '0.85rem', 
                                     display: 'block',
-                                    marginBottom: '0.75rem' 
+                                    marginBottom: '0.5rem' 
                                 }}>
                                     Time
                                 </label>
                                 <input 
                                     type="time" 
                                     className="input"
-                                    style={{ padding: '0.75rem' }}
+                                    style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
                                 />
                             </div>
                         </div>
                     </div>
 
                     <div style={{ 
-                        width: '320px', 
+                        width: '280px', 
                         display: 'flex', 
                         flexDirection: 'column',
-                        gap: '1rem'
+                        gap: '0.75rem'
                     }}>
                         <div>
                             <label style={{ 
                                 fontWeight: 600, 
-                                fontSize: '0.9rem', 
+                                fontSize: '0.85rem', 
                                 display: 'block',
-                                marginBottom: '0.75rem' 
+                                marginBottom: '0.5rem' 
                             }}>
                                 Preview
                             </label>
                             <div style={{ 
                                 display: 'flex', 
                                 gap: '0.5rem',
-                                marginBottom: '1rem',
+                                marginBottom: '0.75rem',
                                 background: 'rgba(0, 0, 0, 0.02)',
-                                padding: '0.25rem',
+                                padding: '0.2rem',
                                 borderRadius: 'var(--radius-md)'
                             }}>
                                 {selectedPlatforms.map(platform => (
@@ -458,13 +501,13 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                                         onClick={() => setPreviewPlatform(platform)}
                                         style={{
                                             flex: 1,
-                                            padding: '0.5rem',
+                                            padding: '0.35rem',
                                             border: 'none',
                                             borderRadius: 'var(--radius-sm)',
                                             background: previewPlatform === platform ? 'white' : 'transparent',
                                             color: previewPlatform === platform ? 'var(--text-main)' : 'var(--text-muted)',
                                             cursor: 'pointer',
-                                            fontSize: '0.8rem',
+                                            fontSize: '0.75rem',
                                             fontWeight: 500,
                                             transition: 'all 0.2s',
                                             boxShadow: previewPlatform === platform ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
@@ -479,18 +522,61 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                     </div>
                 </div>
 
+                {/* Added: Error placeholder UI (mock only); no backend. */}
+                <div className="text-sm" style={{ minHeight: '24px', marginTop: '0.5rem' }} role="status" aria-live="polite">
+                    {false && (
+                        <span style={{ color: 'var(--input-error)' }}>
+                            Something went wrong. Please try again.
+                        </span>
+                    )}
+                </div>
+
                 <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    justifyContent: 'flex-end', 
-                    gap: '1rem', 
-                    paddingTop: '1.5rem', 
-                    marginTop: '1.5rem',
+                    justifyContent: 'space-between', 
+                    flexWrap: 'wrap',
+                    gap: '0.75rem', 
+                    paddingTop: '1rem', 
+                    marginTop: '1rem',
                     borderTop: '1px solid var(--input-border)' 
                 }}>
-                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                    <Button variant="outline">Save Draft</Button>
-                    <Button variant="primary">Schedule Post</Button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        {/* Added: Draft saved indicator (mock); no backend. */}
+                        {showDraftSaved && (
+                            <span className="text-sm" style={{ color: 'var(--input-success)' }}>
+                                Draft saved
+                            </span>
+                        )}
+                        {/* Added: Ctrl/Cmd+Enter hint – visual only. */}
+                        <span className="text-sm text-muted" title="Submit post">
+                            Ctrl+Enter to post
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem' }}>
+                        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowDraftSaved(true);
+                                setTimeout(() => setShowDraftSaved(false), 3000);
+                            }}
+                        >
+                            Save Draft
+                        </Button>
+                        <Button
+                            variant="primary"
+                            disabled={!caption.trim() || isPosting}
+                            loading={isPosting}
+                            onClick={() => {
+                                if (!caption.trim()) return;
+                                setIsPosting(true);
+                                setTimeout(() => setIsPosting(false), 1500);
+                            }}
+                        >
+                            {isPosting ? 'Posting...' : 'Schedule Post'}
+                        </Button>
+                    </div>
                 </div>
             </Card>
         </div>

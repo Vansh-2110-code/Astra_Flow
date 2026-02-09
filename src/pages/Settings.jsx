@@ -2,7 +2,6 @@
 import React from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Card from '../components/ui/Card';
-import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
 const Settings = () => {
@@ -24,8 +23,14 @@ const Settings = () => {
                 <Card>
                     <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Workspace Details</h3>
 
-                    <Input label="Workspace Name" defaultValue="Marketing Campaign 2024" wrapperClassName="mb-4" />
-                    <Input label="Workspace URL" defaultValue="lintcollab.io/marketing-2024" wrapperClassName="mb-4" />
+                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                        <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', paddingLeft: 4, fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-main)' }}>Workspace Name</label>
+                        <input className="input" type="text" defaultValue="Marketing Campaign 2024" style={{ width: '100%' }} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                        <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', paddingLeft: 4, fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-main)' }}>Workspace URL</label>
+                        <input className="input" type="text" defaultValue="lintcollab.io/marketing-2024" style={{ width: '100%' }} />
+                    </div>
 
                     <div className="form-group mb-4">
                         <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', paddingLeft: 4, fontWeight: 500, fontSize: '0.9rem' }}>Logo</label>
