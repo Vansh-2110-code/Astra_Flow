@@ -20,14 +20,14 @@ const ViewSwitcher = ({ currentView, onViewChange }) => {
                 onClick={() => setIsOpen(!isOpen)}
                 className="btn btn-outline"
                 style={{
-                    gap: '0.5rem',
+                    gap: '0.375rem',
                     display: 'flex',
                     alignItems: 'center'
                 }}
             >
-                <CurrentIcon size={16} />
-                {currentViewObj.label}
-                <ChevronDown size={14} />
+                <CurrentIcon size={15} />
+                <span style={{ fontSize: '0.875rem' }}>{currentViewObj.label}</span>
+                <ChevronDown size={13} />
             </button>
 
             {isOpen && (
@@ -68,14 +68,14 @@ const ViewSwitcher = ({ currentView, onViewChange }) => {
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '0.5rem',
-                                        padding: '0.75rem',
+                                        padding: '0.625rem 0.75rem',
                                         borderRadius: 'var(--radius-sm)',
                                         border: 'none',
                                         background: view.id === currentView ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                                         color: view.id === currentView ? 'var(--color-primary)' : 'var(--text-main)',
                                         cursor: 'pointer',
                                         transition: 'all 0.2s',
-                                        fontSize: '0.9rem',
+                                        fontSize: '0.875rem',
                                         fontWeight: view.id === currentView ? 600 : 500,
                                         textAlign: 'left'
                                     }}
@@ -90,7 +90,7 @@ const ViewSwitcher = ({ currentView, onViewChange }) => {
                                         }
                                     }}
                                 >
-                                    <Icon size={16} />
+                                    <Icon size={15} />
                                     {view.label}
                                 </button>
                             );

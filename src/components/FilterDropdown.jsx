@@ -32,15 +32,15 @@ const FilterDropdown = ({ onFilterChange }) => {
                 onClick={() => setIsOpen(!isOpen)}
                 className="btn btn-outline"
                 style={{
-                    gap: '0.5rem',
+                    gap: '0.375rem',
                     display: 'flex',
                     alignItems: 'center',
                     background: hasActiveFilters ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                     borderColor: hasActiveFilters ? 'var(--color-primary)' : 'var(--input-border)'
                 }}
             >
-                <Filter size={16} />
-                Filter
+                <Filter size={15} />
+                <span style={{ fontSize: '0.875rem' }}>Filter</span>
                 {hasActiveFilters && (
                     <span style={{
                         background: 'var(--color-primary)',
@@ -51,13 +51,13 @@ const FilterDropdown = ({ onFilterChange }) => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '0.7rem',
+                        fontSize: '0.65rem',
                         fontWeight: 600
                     }}>
                         {Object.values(filters).filter(v => v !== '').length}
                     </span>
                 )}
-                <ChevronDown size={14} />
+                <ChevronDown size={13} />
             </button>
 
             {isOpen && (
@@ -84,10 +84,10 @@ const FilterDropdown = ({ onFilterChange }) => {
                             zIndex: 100
                         }}
                     >
-                        <div style={{ marginBottom: '1.5rem' }}>
+                        <div style={{ marginBottom: '1.25rem' }}>
                             <label style={{
                                 display: 'block',
-                                fontSize: '0.85rem',
+                                fontSize: '0.8rem',
                                 fontWeight: 600,
                                 color: 'var(--text-main)',
                                 marginBottom: '0.5rem'
@@ -99,11 +99,11 @@ const FilterDropdown = ({ onFilterChange }) => {
                                 onChange={(e) => setFilters({ ...filters, postType: e.target.value })}
                                 style={{
                                     width: '100%',
-                                    padding: '0.75rem',
+                                    padding: '0.625rem 0.75rem',
                                     border: '1px solid var(--input-border)',
                                     borderRadius: 'var(--radius-md)',
                                     background: 'white',
-                                    fontSize: '0.9rem',
+                                    fontSize: '0.875rem',
                                     color: 'var(--text-main)',
                                     cursor: 'pointer',
                                     outline: 'none'
@@ -116,10 +116,10 @@ const FilterDropdown = ({ onFilterChange }) => {
                             </select>
                         </div>
 
-                        <div style={{ marginBottom: '1.5rem' }}>
+                        <div style={{ marginBottom: '1.25rem' }}>
                             <label style={{
                                 display: 'block',
-                                fontSize: '0.85rem',
+                                fontSize: '0.8rem',
                                 fontWeight: 600,
                                 color: 'var(--text-main)',
                                 marginBottom: '0.5rem'
@@ -131,11 +131,11 @@ const FilterDropdown = ({ onFilterChange }) => {
                                 onChange={(e) => setFilters({ ...filters, platform: e.target.value })}
                                 style={{
                                     width: '100%',
-                                    padding: '0.75rem',
+                                    padding: '0.625rem 0.75rem',
                                     border: '1px solid var(--input-border)',
                                     borderRadius: 'var(--radius-md)',
                                     background: 'white',
-                                    fontSize: '0.9rem',
+                                    fontSize: '0.875rem',
                                     color: 'var(--text-main)',
                                     cursor: 'pointer',
                                     outline: 'none'
@@ -148,10 +148,10 @@ const FilterDropdown = ({ onFilterChange }) => {
                             </select>
                         </div>
 
-                        <div style={{ marginBottom: '1.5rem' }}>
+                        <div style={{ marginBottom: '1.25rem' }}>
                             <label style={{
                                 display: 'block',
-                                fontSize: '0.85rem',
+                                fontSize: '0.8rem',
                                 fontWeight: 600,
                                 color: 'var(--text-main)',
                                 marginBottom: '0.5rem'
@@ -165,27 +165,27 @@ const FilterDropdown = ({ onFilterChange }) => {
                                     onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
                                     style={{
                                         flex: 1,
-                                        padding: '0.75rem',
+                                        padding: '0.625rem 0.75rem',
                                         border: '1px solid var(--input-border)',
                                         borderRadius: 'var(--radius-md)',
                                         background: 'white',
-                                        fontSize: '0.85rem',
+                                        fontSize: '0.8rem',
                                         color: 'var(--text-main)',
                                         outline: 'none'
                                     }}
                                 />
-                                <span style={{ color: 'var(--text-muted)' }}>to</span>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>to</span>
                                 <input
                                     type="date"
                                     value={filters.dateTo}
                                     onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
                                     style={{
                                         flex: 1,
-                                        padding: '0.75rem',
+                                        padding: '0.625rem 0.75rem',
                                         border: '1px solid var(--input-border)',
                                         borderRadius: 'var(--radius-md)',
                                         background: 'white',
-                                        fontSize: '0.85rem',
+                                        fontSize: '0.8rem',
                                         color: 'var(--text-main)',
                                         outline: 'none'
                                     }}
@@ -195,8 +195,8 @@ const FilterDropdown = ({ onFilterChange }) => {
 
                         <div style={{
                             display: 'flex',
-                            gap: '0.75rem',
-                            paddingTop: '1rem',
+                            gap: '0.625rem',
+                            paddingTop: '0.875rem',
                             borderTop: '1px solid var(--input-border)'
                         }}>
                             <button

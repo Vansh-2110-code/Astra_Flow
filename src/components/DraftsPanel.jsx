@@ -41,7 +41,7 @@ const DraftsPanel = ({ isOpen, onClose, posts, title = "Drafts" }) => {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        padding: '1.5rem',
+                        padding: '1.25rem 1.5rem',
                         borderBottom: '1px solid var(--input-border)'
                     }}
                 >
@@ -74,15 +74,15 @@ const DraftsPanel = ({ isOpen, onClose, posts, title = "Drafts" }) => {
                     style={{
                         flex: 1,
                         overflowY: 'auto',
-                        padding: '1.5rem'
+                        padding: '1.25rem'
                     }}
                 >
                     {posts.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+                        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                             <p>No {title.toLowerCase()} found</p>
                         </div>
                     ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                             {posts.map(post => (
                                 <PostCard key={post.id} post={post} />
                             ))}

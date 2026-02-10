@@ -58,21 +58,21 @@
 }
 
 .topbar {
-    height: 70px;
+    height: 60px;
     background: rgba(255, 255, 255, 0.5);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--glass-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 2rem;
+    padding: 0 1.5rem;
     z-index: 40;
 }
 
 .page-content {
     flex: 1;
     overflow-y: auto;
-    padding: 2rem;
+    padding: 1.5rem;
     scroll-behavior: smooth;
 }
 
@@ -121,7 +121,7 @@
 }
 
 .post-card {
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
 }
 
 .post-header {
@@ -162,24 +162,52 @@
 
 .calendar-day {
     background: rgba(255, 255, 255, 0.8);
+    height: 140px;
     min-height: 140px;
+    max-height: 140px;
     padding: 0.5rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    transition: background 0.2s;
+    gap: 0;
+    transition: all 0.2s;
+    overflow-y: auto;
 }
 
 .calendar-day:hover {
     background: rgba(255, 255, 255, 0.95);
 }
 
+.calendar-day::-webkit-scrollbar {
+    width: 4px;
+}
+
+.calendar-day::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.calendar-day::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 0.9;
+        transform: scale(1);
+    }
+}
+
 .calendar-header {
     background: white;
-    padding: 1rem;
+    padding: 0.75rem;
     text-align: center;
     font-weight: 600;
     color: var(--text-muted);
+    font-size: 0.85rem;
 }
 
 /* Instagram Grid */
@@ -227,6 +255,19 @@
     background: #fff;
     border: 1px solid var(--input-border);
     position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.media-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.media-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 /* Team Table */

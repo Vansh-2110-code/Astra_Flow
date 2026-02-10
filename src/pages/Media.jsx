@@ -73,7 +73,7 @@ const Media = () => {
 
     return (
         <DashboardLayout>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                     <h1 className="text-h1">Media Library</h1>
                     <p className="text-muted">Manage your assets.</p>
@@ -104,27 +104,40 @@ const Media = () => {
                 </div>
             </div>
 
-            <div className="card" style={{ padding: '0.5rem 0.75rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', background: 'var(--glass-bg)', borderRadius: 'var(--radius-md)' }}>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {['all', 'image', 'video'].map((f) => {
-                        const active = filter === f;
-                        const label = f === 'all' ? 'All' : f === 'image' ? 'Images' : 'Videos';
-                        return (
-                            <button
-                                key={f}
-                                type="button"
-                                className={`btn ${active ? 'btn-primary' : 'btn-outline'}`}
-                                style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem', borderRadius: '999px' }}
-                                onClick={() => setFilter(f)}
-                            >
-                                {label} <span style={{ opacity: 0.9 }}>({counts[f]})</span>
-                            </button>
-                        );
-                    })}
-                </div>
-                <div className="text-sm text-muted" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                    {filtered.length} item{filtered.length === 1 ? '' : 's'}
-                </div>
+            <div style={{ 
+                display: 'flex', 
+                gap: '0.5rem',
+                padding: '0.375rem',
+                background: 'rgba(0, 0, 0, 0.02)',
+                borderRadius: 'var(--radius-md)',
+                marginBottom: '1.5rem'
+            }}>
+                {['all', 'image', 'video'].map((f) => {
+                    const active = filter === f;
+                    const label = f === 'all' ? 'All' : f === 'image' ? 'Images' : 'Videos';
+                    return (
+                        <button
+                            key={f}
+                            type="button"
+                            style={{
+                                flex: 1,
+                                padding: '0.625rem 1rem',
+                                border: 'none',
+                                borderRadius: 'var(--radius-sm)',
+                                background: active ? 'white' : 'transparent',
+                                color: active ? 'var(--color-primary)' : 'var(--text-muted)',
+                                cursor: 'pointer',
+                                fontSize: '0.875rem',
+                                fontWeight: active ? 600 : 500,
+                                transition: 'all 0.2s',
+                                boxShadow: active ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'
+                            }}
+                            onClick={() => setFilter(f)}
+                        >
+                            {label} <span style={{ opacity: 0.8 }}>({counts[f]})</span>
+                        </button>
+                    );
+                })}
             </div>
 
             {uploading && (

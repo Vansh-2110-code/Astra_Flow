@@ -1,83 +1,83 @@
-import React, { useState, useRef, useEffect } from 'react';
-import Card from './ui/Card';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import Button from './ui/Button';
 import PlatformRulesModal from './PlatformRulesModal';
-import { X, Upload, Image as ImageIcon, Calendar, Clock, Facebook, Instagram, Twitter, Linkedin, Info, FileText } from 'lucide-react';
-
-// Added: Compact font size to match Plannable UX. Max caption length for character count (visual only).
-const CAPTION_MAX_LENGTH = 2200;
-// Added: Selected accounts preview – mocked from Connected Apps; visual only.
-const MOCK_SELECTED_ACCOUNTS = ['@main_account', '@page1'];
+import { X, Upload, Image as ImageIcon, Calendar, Clock, Facebook, Instagram, Linkedin, Info, FileText, Trash2 } from 'lucide-react';
+import { workspaces } from '../data/mockData';
 
 const CreatePostModal = ({ isOpen, onClose }) => {
-    const [selectedPlatforms, setSelectedPlatforms] = useState(['Instagram']);
-    const [postTypes, setPostTypes] = useState({ Instagram: 'Post' });
-    const [previewPlatform, setPreviewPlatform] = useState('Instagram');
+    const { workspaceId } = useParams();
+    const [selectedPlatforms, setSelectedPlatforms] = useState([]);
+    const [postType, setPostType] = useState('Post');
+    const [previewPlatform, setPreviewPlatform] = useState('');
     const [showRules, setShowRules] = useState(false);
     const [caption, setCaption] = useState('');
-    const [media, setMedia] = useState(null);
-    // Added UX enhancement – non-breaking: loading and draft/error mock UI only
-    const [isPosting, setIsPosting] = useState(false);
-    const [showDraftSaved, setShowDraftSaved] = useState(false);
-    const captionRef = useRef(null);
+    const [mediaFiles, setMediaFiles] = useState([]);
+    const [scheduleType, setScheduleType] = useState('now');
+    const [scheduleDate, setScheduleDate] = useState('');
+    const [scheduleTime, setScheduleTime] = useState('');
 
-    // Added UX enhancement – non-breaking: auto-focus caption when modal opens
+    const currentWorkspace = workspaces.find(w => w.id === parseInt(workspaceId)) || workspaces[0];
+
+    const allPlatforms = [
+        { name: 'Instagram', icon: Instagram, color: '#E1306C', types: ['Post', 'Story', 'Reel'], accountName: '@brandstudio' },
+        { name: 'Facebook', icon: Facebook, color: '#4267B2', types: ['Post', 'Story', 'Reel'], accountName: 'Brand Studio' },
+        { name: 'LinkedIn', icon: Linkedin, color: '#0077b5', types: ['Post'], accountName: 'Brand Studio Inc.' }
+    ];
+
+    const connectedAccounts = allPlatforms.filter(platform => 
+        currentWorkspace.connectedPlatforms?.includes(platform.name)
+    );
+
     useEffect(() => {
-        if (isOpen && captionRef.current) {
-            const t = setTimeout(() => captionRef.current?.focus(), 100);
-            return () => clearTimeout(t);
+        if (connectedAccounts.length > 0 && selectedPlatforms.length === 0) {
+            setSelectedPlatforms([connectedAccounts[0].name]);
+            setPreviewPlatform(connectedAccounts[0].name);
         }
     }, [isOpen]);
 
-    // Added UX enhancement – non-breaking: keyboard shortcut hint (Ctrl/Cmd+Enter) – visual hint only; optional trigger
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                e.preventDefault();
-                if (caption.trim()) {
-                    setIsPosting(true);
-                    setTimeout(() => setIsPosting(false), 1500);
-                }
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, caption]);
-
     if (!isOpen) return null;
-
-    const connectedPlatforms = [
-        { name: 'Instagram', icon: Instagram, color: '#E1306C', types: ['Post', 'Story', 'Reel'] },
-        { name: 'Facebook', icon: Facebook, color: '#4267B2', types: ['Post', 'Story'] },
-        { name: 'LinkedIn', icon: Linkedin, color: '#0077b5', types: ['Post'] }
-    ];
 
     const togglePlatform = (platformName) => {
         if (selectedPlatforms.includes(platformName)) {
-            setSelectedPlatforms(selectedPlatforms.filter(p => p !== platformName));
-            const newPostTypes = { ...postTypes };
-            delete newPostTypes[platformName];
-            setPostTypes(newPostTypes);
+            if (selectedPlatforms.length > 1) {
+                setSelectedPlatforms(selectedPlatforms.filter(p => p !== platformName));
+                if (previewPlatform === platformName) {
+                    setPreviewPlatform(selectedPlatforms.find(p => p !== platformName));
+                }
+            }
         } else {
             setSelectedPlatforms([...selectedPlatforms, platformName]);
-            setPostTypes({ ...postTypes, [platformName]: 'Post' });
         }
     };
 
-    const handlePostTypeChange = (platform, type) => {
-        setPostTypes({ ...postTypes, [platform]: type });
+    const getAvailablePostTypes = () => {
+        const types = new Set();
+        selectedPlatforms.forEach(platformName => {
+            const platform = connectedAccounts.find(p => p.name === platformName);
+            if (platform) {
+                platform.types.forEach(type => types.add(type));
+            }
+        });
+        return Array.from(types);
     };
 
     const handleFileUpload = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setMedia(URL.createObjectURL(file));
-        }
+        const files = Array.from(e.target.files);
+        const newMedia = files.map(file => ({
+            id: Date.now() + Math.random(),
+            url: URL.createObjectURL(file),
+            file
+        }));
+        setMediaFiles([...mediaFiles, ...newMedia]);
+    };
+
+    const removeMedia = (id) => {
+        setMediaFiles(mediaFiles.filter(m => m.id !== id));
     };
 
     const renderPreview = () => {
-        const platform = connectedPlatforms.find(p => p.name === previewPlatform);
+        const platform = connectedAccounts.find(p => p.name === previewPlatform);
         if (!platform) return null;
 
         if (previewPlatform === 'Instagram') {
@@ -88,16 +88,33 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                     overflow: 'hidden',
                     background: 'white'
                 }}>
-                    {media && (
-                        <img 
-                            src={media} 
-                            alt="Preview" 
-                            style={{ 
-                                width: '100%', 
-                                aspectRatio: '1', 
-                                objectFit: 'cover' 
-                            }} 
-                        />
+                    {mediaFiles.length > 0 && (
+                        <div style={{ position: 'relative' }}>
+                            <img 
+                                src={mediaFiles[0].url} 
+                                alt="Preview" 
+                                style={{ 
+                                    width: '100%', 
+                                    aspectRatio: '1', 
+                                    objectFit: 'cover' 
+                                }} 
+                            />
+                            {mediaFiles.length > 1 && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '0.75rem',
+                                    right: '0.75rem',
+                                    background: 'rgba(0, 0, 0, 0.6)',
+                                    color: 'white',
+                                    padding: '0.25rem 0.5rem',
+                                    borderRadius: '12px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 600
+                                }}>
+                                    1/{mediaFiles.length}
+                                </div>
+                            )}
+                        </div>
                     )}
                     <div style={{ padding: '1rem' }}>
                         <div style={{ 
@@ -124,14 +141,14 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                         fontSize: '0.9rem', 
                         color: 'var(--text-main)',
                         lineHeight: 1.5,
-                        marginBottom: '1rem',
+                        marginBottom: mediaFiles.length > 0 ? '1rem' : 0,
                         whiteSpace: 'pre-wrap'
                     }}>
                         {caption || 'Your caption will appear here...'}
                     </div>
-                    {media && (
+                    {mediaFiles.length > 0 && (
                         <img 
-                            src={media} 
+                            src={mediaFiles[0].url} 
                             alt="Preview" 
                             style={{ 
                                 width: '100%', 
@@ -155,15 +172,14 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                         fontSize: '0.9rem', 
                         color: 'var(--text-main)',
                         lineHeight: 1.6,
-                        marginBottom: '1rem',
-                        whiteSpace: 'pre-wrap',
-                        fontFamily: 'var(--font-body)'
+                        marginBottom: mediaFiles.length > 0 ? '1rem' : 0,
+                        whiteSpace: 'pre-wrap'
                     }}>
                         {caption || 'Your professional update will appear here...'}
                     </div>
-                    {media && (
+                    {mediaFiles.length > 0 && (
                         <img 
-                            src={media} 
+                            src={mediaFiles[0].url} 
                             alt="Preview" 
                             style={{ 
                                 width: '100%', 
@@ -178,6 +194,8 @@ const CreatePostModal = ({ isOpen, onClose }) => {
         }
     };
 
+    const availablePostTypes = getAvailablePostTypes();
+
     return (
         <div style={{
             position: 'fixed',
@@ -187,7 +205,7 @@ const CreatePostModal = ({ isOpen, onClose }) => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem',
+            padding: '2rem',
             backdropFilter: 'blur(4px)'
         }}>
             <PlatformRulesModal 
@@ -196,25 +214,25 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                 platform={previewPlatform}
             />
             
-            <Card className="modal-content" style={{ 
+            <div style={{ 
                 width: '100%', 
-                maxWidth: '720px', 
-                background: 'white', 
-                maxHeight: '88vh', 
+                maxWidth: '1200px', 
+                background: 'white',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                maxHeight: '90vh', 
                 overflowY: 'auto',
                 display: 'flex',
-                flexDirection: 'column',
-                padding: '1.25rem'
+                flexDirection: 'column'
             }}>
                 <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'space-between', 
-                    marginBottom: '1rem', 
-                    borderBottom: '1px solid var(--input-border)', 
-                    paddingBottom: '0.75rem' 
+                    padding: '1.5rem 2rem',
+                    borderBottom: '1px solid var(--input-border)'
                 }}>
-                    <h2 className="text-h3" style={{ fontSize: '1.1rem' }}>Create New Post</h2>
+                    <h2 className="text-h2">Create New Post</h2>
                     <button 
                         onClick={onClose} 
                         style={{ 
@@ -237,262 +255,510 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', gap: '1.25rem', flex: 1 }}>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div>
-                            <div style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'space-between',
-                                marginBottom: '0.5rem' 
-                            }}>
-                                <label style={{ fontWeight: 600, fontSize: '0.85rem' }}>
-                                    Select Platforms
-                                </label>
+                <div style={{ 
+                    padding: '1.5rem 2rem',
+                    borderBottom: '1px solid var(--input-border)',
+                    background: 'rgba(0, 0, 0, 0.01)'
+                }}>
+                    <div style={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        marginBottom: '1rem'
+                    }}>
+                        <label style={{ 
+                            fontWeight: 600, 
+                            fontSize: '0.95rem', 
+                            color: 'var(--text-main)'
+                        }}>
+                            Connected Accounts
+                        </label>
+                        <button
+                            onClick={() => setShowRules(true)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.375rem',
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--color-primary)',
+                                cursor: 'pointer',
+                                fontSize: '0.85rem',
+                                fontWeight: 500,
+                                padding: '0.375rem 0.75rem',
+                                borderRadius: 'var(--radius-sm)',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'none';
+                            }}
+                        >
+                            <Info size={14} />
+                            Platform Guidelines
+                        </button>
+                    </div>
+
+                    <div style={{ 
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '1rem'
+                    }}>
+                        {connectedAccounts.map((account) => {
+                            const Icon = account.icon;
+                            const isSelected = selectedPlatforms.includes(account.name);
+                            return (
                                 <button
-                                    onClick={() => setShowRules(true)}
+                                    key={account.name}
+                                    onClick={() => togglePlatform(account.name)}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
-                                        gap: '0.25rem',
-                                        background: 'none',
-                                        border: 'none',
-                                        color: 'var(--color-primary)',
+                                        gap: '1rem',
+                                        padding: '1rem 1.25rem',
+                                        border: `2px solid ${isSelected ? account.color : 'var(--input-border)'}`,
+                                        borderRadius: 'var(--radius-md)',
+                                        background: isSelected ? 'white' : 'white',
                                         cursor: 'pointer',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 500,
-                                        padding: '0.25rem 0.5rem',
-                                        borderRadius: 'var(--radius-sm)',
-                                        transition: 'all 0.2s'
+                                        transition: 'all 0.2s',
+                                        textAlign: 'left',
+                                        boxShadow: isSelected ? `0 0 0 4px ${account.color}15` : 'none'
                                     }}
                                     onMouseEnter={(e) => {
-                                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                                        if (!isSelected) {
+                                            e.currentTarget.style.borderColor = account.color;
+                                            e.currentTarget.style.background = `${account.color}03`;
+                                        }
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.currentTarget.style.background = 'none';
+                                        if (!isSelected) {
+                                            e.currentTarget.style.borderColor = 'var(--input-border)';
+                                            e.currentTarget.style.background = 'white';
+                                        }
                                     }}
                                 >
-                                    <Info size={14} />
-                                    View Rules
+                                    <div style={{
+                                        padding: '0.75rem',
+                                        background: isSelected ? `${account.color}15` : 'rgba(0, 0, 0, 0.03)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                        <Icon size={20} color={isSelected ? account.color : 'var(--text-muted)'} />
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ 
+                                            fontSize: '0.95rem', 
+                                            fontWeight: 600, 
+                                            color: isSelected ? account.color : 'var(--text-main)',
+                                            marginBottom: '0.125rem'
+                                        }}>
+                                            {account.name}
+                                        </div>
+                                        <div style={{ 
+                                            fontSize: '0.8rem', 
+                                            color: 'var(--text-muted)'
+                                        }}>
+                                            {account.accountName}
+                                        </div>
+                                    </div>
                                 </button>
-                            </div>
-                            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                                {connectedPlatforms.map((p) => {
-                                    const Icon = p.icon;
-                                    const isSelected = selectedPlatforms.includes(p.name);
-                                    return (
-                                        <button
-                                            key={p.name}
-                                            onClick={() => togglePlatform(p.name)}
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'center',
-                                                gap: '0.5rem',
-                                                padding: '0.5rem 0.75rem',
-                                                border: `2px solid ${isSelected ? 'var(--color-primary)' : 'var(--input-border)'}`,
-                                                borderRadius: 'var(--radius-md)',
-                                                background: isSelected ? 'rgba(99, 102, 241, 0.05)' : 'white',
-                                                cursor: 'pointer',
-                                                flex: '1 1 auto',
-                                                minWidth: '80px',
-                                                transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            <Icon size={18} color={isSelected ? p.color : 'var(--text-muted)'} />
-                                            <span style={{ 
-                                                fontSize: '0.75rem', 
-                                                fontWeight: 500, 
-                                                color: isSelected ? 'var(--text-main)' : 'var(--text-muted)' 
-                                            }}>
-                                                {p.name}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {/* Added: Selected accounts preview from Connected Apps – mocked; visual only. */}
-                            <div className="text-sm text-muted" style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
-                                Posting to: {MOCK_SELECTED_ACCOUNTS.join(', ')}
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '2rem', padding: '2rem' }}>
+                    <div style={{ flex: '1 1 60%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                        <div>
+                            <label style={{ 
+                                fontWeight: 600, 
+                                fontSize: '0.95rem', 
+                                color: 'var(--text-main)',
+                                display: 'block',
+                                marginBottom: '1rem'
+                            }}>
+                                Post Type
+                            </label>
+                            <div style={{ 
+                                display: 'flex', 
+                                gap: '0.75rem',
+                                padding: '0.5rem',
+                                background: 'rgba(0, 0, 0, 0.02)',
+                                borderRadius: 'var(--radius-md)'
+                            }}>
+                                {availablePostTypes.map(type => (
+                                    <button
+                                        key={type}
+                                        onClick={() => setPostType(type)}
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.75rem 1rem',
+                                            border: 'none',
+                                            borderRadius: 'var(--radius-sm)',
+                                            background: postType === type ? 'white' : 'transparent',
+                                            color: postType === type ? 'var(--color-primary)' : 'var(--text-muted)',
+                                            cursor: 'pointer',
+                                            fontSize: '0.9rem',
+                                            fontWeight: postType === type ? 600 : 500,
+                                            transition: 'all 0.2s',
+                                            boxShadow: postType === type ? '0 2px 8px rgba(0,0,0,0.08)' : 'none'
+                                        }}
+                                    >
+                                        {type}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-
-                        {selectedPlatforms.length > 0 && (
-                            <div>
-                                <label style={{ 
-                                    fontWeight: 600, 
-                                    fontSize: '0.85rem', 
-                                    display: 'block',
-                                    marginBottom: '0.5rem' 
-                                }}>
-                                    Post Type per Platform
-                                </label>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {selectedPlatforms.map(platformName => {
-                                        const platform = connectedPlatforms.find(p => p.name === platformName);
-                                        return (
-                                            <div key={platformName} style={{ 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                gap: '0.75rem',
-                                                padding: '0.5rem',
-                                                background: 'rgba(0, 0, 0, 0.02)',
-                                                borderRadius: 'var(--radius-sm)'
-                                            }}>
-                                                <span style={{ 
-                                                    fontSize: '0.8rem', 
-                                                    fontWeight: 500,
-                                                    minWidth: '72px'
-                                                }}>
-                                                    {platformName}
-                                                </span>
-                                                <div style={{ display: 'flex', gap: '0.5rem', flex: 1 }}>
-                                                    {platform.types.map(type => (
-                                                        <button
-                                                            key={type}
-                                                            onClick={() => handlePostTypeChange(platformName, type)}
-                                                            style={{
-                                                                padding: '0.4rem 0.75rem',
-                                                                border: `1px solid ${postTypes[platformName] === type ? 'var(--color-primary)' : 'var(--input-border)'}`,
-                                                                borderRadius: '20px',
-                                                                background: postTypes[platformName] === type ? 'rgba(99, 102, 241, 0.1)' : 'white',
-                                                                color: postTypes[platformName] === type ? 'var(--color-primary)' : 'var(--text-muted)',
-                                                                cursor: 'pointer',
-                                                                fontSize: '0.75rem',
-                                                                fontWeight: 500,
-                                                                transition: 'all 0.2s'
-                                                            }}
-                                                        >
-                                                            {type}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
 
                         <div>
                             <label style={{ 
                                 fontWeight: 600, 
-                                fontSize: '0.85rem', 
+                                fontSize: '0.95rem', 
+                                color: 'var(--text-main)',
                                 display: 'block',
-                                marginBottom: '0.5rem' 
+                                marginBottom: '1rem'
                             }}>
                                 Caption
                             </label>
                             <textarea
-                                ref={captionRef}
                                 value={caption}
                                 onChange={(e) => setCaption(e.target.value)}
                                 className="input"
                                 placeholder="Write your caption here..."
-                                rows={4}
-                                style={{ resize: 'none', fontFamily: 'inherit', padding: '0.6rem 0.75rem', fontSize: '0.85rem' }}
+                                rows={6}
+                                style={{ 
+                                    resize: 'none', 
+                                    fontFamily: 'inherit',
+                                    fontSize: '0.95rem',
+                                    lineHeight: 1.6
+                                }}
                             />
-                            {/* Added: Compact font size to match Plannable UX. Character count (visual only). */}
-                            <div className="text-sm text-muted" style={{ marginTop: '0.5rem' }}>
-                                {caption.length} / {CAPTION_MAX_LENGTH}
+                        </div>
+
+                        <div>
+                            <label style={{ 
+                                fontWeight: 600, 
+                                fontSize: '0.95rem', 
+                                color: 'var(--text-main)',
+                                display: 'block',
+                                marginBottom: '1rem'
+                            }}>
+                                Media
+                            </label>
+                            
+                            {mediaFiles.length > 0 && (
+                                <div style={{ 
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                                    gap: '1rem',
+                                    marginBottom: '1rem'
+                                }}>
+                                    {mediaFiles.map(media => (
+                                        <div key={media.id} style={{ position: 'relative', aspectRatio: '1' }}>
+                                            <img 
+                                                src={media.url} 
+                                                alt="" 
+                                                style={{ 
+                                                    width: '100%', 
+                                                    height: '100%', 
+                                                    objectFit: 'cover',
+                                                    borderRadius: 'var(--radius-md)',
+                                                    border: '1px solid var(--input-border)'
+                                                }}
+                                            />
+                                            <button
+                                                onClick={() => removeMedia(media.id)}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '0.5rem',
+                                                    right: '0.5rem',
+                                                    padding: '0.5rem',
+                                                    background: 'rgba(0, 0, 0, 0.7)',
+                                                    border: 'none',
+                                                    borderRadius: '50%',
+                                                    color: 'white',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = 'rgba(239, 68, 68, 0.9)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+                                                }}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                <label style={{ cursor: 'pointer' }}>
+                                    <input
+                                        type="file"
+                                        accept="image/*,video/*"
+                                        multiple
+                                        onChange={handleFileUpload}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <div style={{
+                                        padding: '1.25rem',
+                                        border: '1px solid var(--input-border)',
+                                        borderRadius: 'var(--radius-md)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        background: 'white'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--color-primary)';
+                                        e.currentTarget.style.background = 'rgba(99, 102, 241, 0.02)';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.borderColor = 'var(--input-border)';
+                                        e.currentTarget.style.background = 'white';
+                                    }}
+                                    >
+                                        <div style={{
+                                            padding: '0.75rem',
+                                            background: 'rgba(99, 102, 241, 0.1)',
+                                            borderRadius: '50%'
+                                        }}>
+                                            <Upload size={20} color="var(--color-primary)" />
+                                        </div>
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>
+                                            Upload
+                                        </span>
+                                    </div>
+                                </label>
+
+                                <button style={{
+                                    padding: '1.25rem',
+                                    border: '1px solid var(--input-border)',
+                                    borderRadius: 'var(--radius-md)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    background: 'white'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.02)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--input-border)';
+                                    e.currentTarget.style.background = 'white';
+                                }}
+                                >
+                                    <div style={{
+                                        padding: '0.75rem',
+                                        background: 'rgba(99, 102, 241, 0.1)',
+                                        borderRadius: '50%'
+                                    }}>
+                                        <ImageIcon size={20} color="var(--color-primary)" />
+                                    </div>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>
+                                        Library
+                                    </span>
+                                </button>
+
+                                <button style={{
+                                    padding: '1.25rem',
+                                    border: '1px solid var(--input-border)',
+                                    borderRadius: 'var(--radius-md)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '0.75rem',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    background: 'white'
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--color-primary)';
+                                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.02)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = 'var(--input-border)';
+                                    e.currentTarget.style.background = 'white';
+                                }}
+                                >
+                                    <div style={{
+                                        padding: '0.75rem',
+                                        background: 'rgba(99, 102, 241, 0.1)',
+                                        borderRadius: '50%'
+                                    }}>
+                                        <FileText size={20} color="var(--color-primary)" />
+                                    </div>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>
+                                        Canva
+                                    </span>
+                                </button>
                             </div>
                         </div>
 
                         <div>
                             <label style={{ 
                                 fontWeight: 600, 
-                                fontSize: '0.85rem', 
+                                fontSize: '0.95rem', 
+                                color: 'var(--text-main)',
                                 display: 'block',
-                                marginBottom: '0.5rem' 
+                                marginBottom: '1rem'
                             }}>
-                                Media
+                                Schedule
                             </label>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <label style={{ flex: 1 }}>
-                                    <input
-                                        type="file"
-                                        accept="image/*,video/*"
-                                        onChange={handleFileUpload}
-                                        style={{ display: 'none' }}
-                                    />
-                                    <div className="btn btn-outline" style={{ 
-                                        width: '100%', 
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '0.5rem',
-                                        cursor: 'pointer'
-                                    }}>
-                                        <Upload size={16} />
-                                        Local Upload
-                                    </div>
-                                </label>
-                                <button className="btn btn-outline" style={{ flex: 1, gap: '0.5rem' }}>
-                                    <ImageIcon size={16} />
-                                    Media Library
+                            <div style={{ 
+                                display: 'flex', 
+                                gap: '1rem',
+                                marginBottom: '1rem'
+                            }}>
+                                <button
+                                    onClick={() => setScheduleType('now')}
+                                    style={{
+                                        flex: 1,
+                                        padding: '1rem',
+                                        border: `2px solid ${scheduleType === 'now' ? 'var(--color-primary)' : 'var(--input-border)'}`,
+                                        borderRadius: 'var(--radius-md)',
+                                        background: scheduleType === 'now' ? 'rgba(99, 102, 241, 0.05)' : 'white',
+                                        color: scheduleType === 'now' ? 'var(--color-primary)' : 'var(--text-muted)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        fontWeight: 600,
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Post Now
                                 </button>
-                                <button className="btn btn-outline" style={{ flex: 1, gap: '0.5rem' }}>
-                                    <FileText size={16} />
-                                    Canva
+                                <button
+                                    onClick={() => setScheduleType('later')}
+                                    style={{
+                                        flex: 1,
+                                        padding: '1rem',
+                                        border: `2px solid ${scheduleType === 'later' ? 'var(--color-primary)' : 'var(--input-border)'}`,
+                                        borderRadius: 'var(--radius-md)',
+                                        background: scheduleType === 'later' ? 'rgba(99, 102, 241, 0.05)' : 'white',
+                                        color: scheduleType === 'later' ? 'var(--color-primary)' : 'var(--text-muted)',
+                                        cursor: 'pointer',
+                                        fontSize: '0.9rem',
+                                        fontWeight: 600,
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Schedule
                                 </button>
                             </div>
-                        </div>
 
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <div style={{ flex: 1 }}>
-                                <label style={{ 
-                                    fontWeight: 600, 
-                                    fontSize: '0.85rem', 
-                                    display: 'block',
-                                    marginBottom: '0.5rem' 
-                                }}>
-                                    Schedule Date
-                                </label>
-                                <input 
-                                    type="date" 
-                                    className="input"
-                                    style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
-                                />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                                <label style={{ 
-                                    fontWeight: 600, 
-                                    fontSize: '0.85rem', 
-                                    display: 'block',
-                                    marginBottom: '0.5rem' 
-                                }}>
-                                    Time
-                                </label>
-                                <input 
-                                    type="time" 
-                                    className="input"
-                                    style={{ padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
-                                />
-                            </div>
+                            {scheduleType === 'later' && (
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{
+                                            display: 'block',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 500,
+                                            color: 'var(--text-muted)',
+                                            marginBottom: '0.5rem'
+                                        }}>
+                                            Date
+                                        </label>
+                                        <div style={{ position: 'relative' }}>
+                                            <Calendar size={18} style={{
+                                                position: 'absolute',
+                                                left: '1rem',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                color: 'var(--text-muted)',
+                                                pointerEvents: 'none'
+                                            }} />
+                                            <input 
+                                                type="date"
+                                                value={scheduleDate}
+                                                onChange={(e) => setScheduleDate(e.target.value)}
+                                                className="input"
+                                                style={{ 
+                                                    paddingLeft: '3rem',
+                                                    paddingTop: '0.75rem',
+                                                    paddingBottom: '0.75rem'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <label style={{
+                                            display: 'block',
+                                            fontSize: '0.85rem',
+                                            fontWeight: 500,
+                                            color: 'var(--text-muted)',
+                                            marginBottom: '0.5rem'
+                                        }}>
+                                            Time
+                                        </label>
+                                        <div style={{ position: 'relative' }}>
+                                            <Clock size={18} style={{
+                                                position: 'absolute',
+                                                left: '1rem',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                color: 'var(--text-muted)',
+                                                pointerEvents: 'none'
+                                            }} />
+                                            <input 
+                                                type="time"
+                                                value={scheduleTime}
+                                                onChange={(e) => setScheduleTime(e.target.value)}
+                                                className="input"
+                                                style={{ 
+                                                    paddingLeft: '3rem',
+                                                    paddingTop: '0.75rem',
+                                                    paddingBottom: '0.75rem'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     <div style={{ 
-                        width: '280px', 
+                        flex: '1 1 40%',
                         display: 'flex', 
                         flexDirection: 'column',
-                        gap: '0.75rem'
+                        gap: '1rem',
+                        position: 'sticky',
+                        top: '2rem',
+                        alignSelf: 'flex-start'
                     }}>
                         <div>
                             <label style={{ 
                                 fontWeight: 600, 
-                                fontSize: '0.85rem', 
+                                fontSize: '0.95rem', 
+                                color: 'var(--text-main)',
                                 display: 'block',
-                                marginBottom: '0.5rem' 
+                                marginBottom: '1rem'
                             }}>
                                 Preview
                             </label>
                             <div style={{ 
                                 display: 'flex', 
                                 gap: '0.5rem',
-                                marginBottom: '0.75rem',
+                                marginBottom: '1.5rem',
                                 background: 'rgba(0, 0, 0, 0.02)',
-                                padding: '0.2rem',
+                                padding: '0.375rem',
                                 borderRadius: 'var(--radius-md)'
                             }}>
                                 {selectedPlatforms.map(platform => (
@@ -501,16 +767,16 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                                         onClick={() => setPreviewPlatform(platform)}
                                         style={{
                                             flex: 1,
-                                            padding: '0.35rem',
+                                            padding: '0.625rem',
                                             border: 'none',
                                             borderRadius: 'var(--radius-sm)',
                                             background: previewPlatform === platform ? 'white' : 'transparent',
                                             color: previewPlatform === platform ? 'var(--text-main)' : 'var(--text-muted)',
                                             cursor: 'pointer',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 500,
+                                            fontSize: '0.85rem',
+                                            fontWeight: 600,
                                             transition: 'all 0.2s',
-                                            boxShadow: previewPlatform === platform ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
+                                            boxShadow: previewPlatform === platform ? '0 2px 6px rgba(0,0,0,0.08)' : 'none'
                                         }}
                                     >
                                         {platform}
@@ -522,63 +788,22 @@ const CreatePostModal = ({ isOpen, onClose }) => {
                     </div>
                 </div>
 
-                {/* Added: Error placeholder UI (mock only); no backend. */}
-                <div className="text-sm" style={{ minHeight: '24px', marginTop: '0.5rem' }} role="status" aria-live="polite">
-                    {false && (
-                        <span style={{ color: 'var(--input-error)' }}>
-                            Something went wrong. Please try again.
-                        </span>
-                    )}
-                </div>
-
                 <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    justifyContent: 'space-between', 
-                    flexWrap: 'wrap',
-                    gap: '0.75rem', 
-                    paddingTop: '1rem', 
-                    marginTop: '1rem',
-                    borderTop: '1px solid var(--input-border)' 
+                    justifyContent: 'flex-end', 
+                    gap: '1rem', 
+                    padding: '1.5rem 2rem',
+                    borderTop: '1px solid var(--input-border)',
+                    background: 'white'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                        {/* Added: Draft saved indicator (mock); no backend. */}
-                        {showDraftSaved && (
-                            <span className="text-sm" style={{ color: 'var(--input-success)' }}>
-                                Draft saved
-                            </span>
-                        )}
-                        {/* Added: Ctrl/Cmd+Enter hint – visual only. */}
-                        <span className="text-sm text-muted" title="Submit post">
-                            Ctrl+Enter to post
-                        </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '1rem' }}>
-                        <Button variant="ghost" onClick={onClose}>Cancel</Button>
-                        <Button
-                            variant="outline"
-                            onClick={() => {
-                                setShowDraftSaved(true);
-                                setTimeout(() => setShowDraftSaved(false), 3000);
-                            }}
-                        >
-                            Save Draft
-                        </Button>
-                        <Button
-                            variant="primary"
-                            disabled={!caption.trim() || isPosting}
-                            loading={isPosting}
-                            onClick={() => {
-                                if (!caption.trim()) return;
-                                setIsPosting(true);
-                                setTimeout(() => setIsPosting(false), 1500);
-                            }}
-                        >
-                            {isPosting ? 'Posting...' : 'Schedule Post'}
-                        </Button>
-                    </div>
+                    <Button variant="ghost" onClick={onClose}>Cancel</Button>
+                    <Button variant="outline">Save Draft</Button>
+                    <Button variant="primary">
+                        {scheduleType === 'now' ? 'Publish Now' : 'Schedule Post'}
+                    </Button>
                 </div>
-            </Card>
+            </div>
         </div>
     );
 };

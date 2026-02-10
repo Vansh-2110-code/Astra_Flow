@@ -6,28 +6,25 @@ const PlatformRulesModal = ({ isOpen, onClose, platform }) => {
 
     const rules = {
         Instagram: {
-            imageSize: '1080 x 1080px (1:1), 1080 x 1350px (4:5)',
+            imageSize: 'Post: 1:1 (1080x1080), 1.91:1 (1080x608), 4:5 (1080x1350) | Story: 1080x1920 | Reel: 1080x1920',
             captionLimit: '2,200 characters',
-            formats: 'JPG, PNG, MP4, MOV',
-            postTypes: 'Post, Story, Reel'
+            formats: 'JPG, PNG, MP4, MOV (max 10 images in carousel)',
+            postTypes: 'Post (single/carousel), Story (15s max), Reel (90s max)',
+            videoLength: 'Story: 15s max | Reel: 90s max'
         },
         Facebook: {
-            imageSize: '1200 x 630px recommended',
+            imageSize: 'Post: 1200x630 | Story: 1080x1920 | Reel: 1080x1920',
             captionLimit: '63,206 characters',
-            formats: 'JPG, PNG, GIF, MP4',
-            postTypes: 'Post, Story'
+            formats: 'JPG, PNG, GIF, MP4 (1:1 or 4:5)',
+            postTypes: 'Post, Story (1-15s), Reel (3-90s)',
+            videoLength: 'Post: max 240 min | Story: 1-15s | Reel: 3-90s'
         },
         LinkedIn: {
-            imageSize: '1200 x 627px recommended',
+            imageSize: '1200x627 (landscape), 1080x1080 (square)',
             captionLimit: '3,000 characters',
-            formats: 'JPG, PNG, GIF, PDF, MP4',
-            postTypes: 'Post'
-        },
-        Twitter: {
-            imageSize: '1200 x 675px recommended',
-            captionLimit: '280 characters',
-            formats: 'JPG, PNG, GIF, MP4',
-            postTypes: 'Post'
+            formats: 'JPG, PNG, GIF, PDF, MP4 (1:1, 16:9, 9:16)',
+            postTypes: 'Post only (no Stories)',
+            videoLength: 'Video: 3 seconds to 10 minutes'
         }
     };
 
@@ -179,6 +176,28 @@ const PlatformRulesModal = ({ isOpen, onClose, platform }) => {
                             {platformRules.postTypes}
                         </div>
                     </div>
+
+                    {platformRules.videoLength && (
+                        <div>
+                            <div style={{
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: 'var(--text-muted)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.05em',
+                                marginBottom: '0.5rem'
+                            }}>
+                                Video Length
+                            </div>
+                            <div style={{
+                                fontSize: '0.95rem',
+                                color: 'var(--text-main)',
+                                fontWeight: 500
+                            }}>
+                                {platformRules.videoLength}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

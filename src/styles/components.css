@@ -5,7 +5,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: var(--radius-md);
   font-weight: 600;
   cursor: pointer;
@@ -13,6 +13,7 @@
   font-family: var(--font-body);
   border: none;
   gap: 0.5rem;
+  font-size: 0.9rem;
 }
 
 .btn-primary {
@@ -75,7 +76,7 @@
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1.25rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -87,11 +88,11 @@
 /* Inputs */
 .input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 9px 14px;
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: var(--radius-md);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: var(--text-main);
   outline: none;
   transition: all 0.2s ease;
@@ -137,9 +138,9 @@
 .avatar-lg { width: 56px; height: 56px; }
 
 /* Typography Helpers */
-.text-h1 { font-family: var(--font-heading); font-size: 2rem; font-weight: 700; color: var(--text-main); }
-.text-h2 { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 600; color: var(--text-main); }
-.text-h3 { font-family: var(--font-heading); font-size: 1.25rem; font-weight: 600; color: var(--text-main); }
-.text-body { font-size: 1rem; color: var(--text-main); }
-.text-muted { color: var(--text-muted); font-size: 0.9rem; }
-.text-sm { font-size: 0.85rem; }
+.text-h1 { font-family: var(--font-heading); font-size: 1.75rem; font-weight: 700; color: var(--text-main); }
+.text-h2 { font-family: var(--font-heading); font-size: 1.35rem; font-weight: 600; color: var(--text-main); }
+.text-h3 { font-family: var(--font-heading); font-size: 1.15rem; font-weight: 600; color: var(--text-main); }
+.text-body { font-size: 0.95rem; color: var(--text-main); }
+.text-muted { color: var(--text-muted); font-size: 0.875rem; }
+.text-sm { font-size: 0.8rem; }

@@ -14,7 +14,7 @@ const WorkspaceSwitcher = ({ currentWorkspaceId }) => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
-                    padding: '8px 12px',
+                    padding: '7px 11px',
                     background: 'rgba(255, 255, 255, 0.6)',
                     border: '1px solid var(--input-border)',
                     borderRadius: 'var(--radius-md)',
@@ -22,13 +22,13 @@ const WorkspaceSwitcher = ({ currentWorkspaceId }) => {
                     transition: 'all 0.2s',
                     fontWeight: 500,
                     color: 'var(--text-main)',
-                    fontSize: '0.95rem'
+                    fontSize: '0.875rem'
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.8)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.6)'}
             >
                 <span>{currentWorkspace.name}</span>
-                <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />
+                <ChevronDown size={14} style={{ color: 'var(--text-muted)' }} />
             </button>
 
             {isOpen && (
@@ -80,10 +80,10 @@ const WorkspaceSwitcher = ({ currentWorkspaceId }) => {
                                 }}
                                 onClick={() => setIsOpen(false)}
                             >
-                                <div style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.25rem' }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.25rem' }}>
                                     {workspace.name}
                                 </div>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                     {workspace.posts} posts • {workspace.activity}
                                 </div>
                             </a>
