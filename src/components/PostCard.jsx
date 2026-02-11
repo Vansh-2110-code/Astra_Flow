@@ -19,17 +19,24 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
     const [visibility, setVisibility] = useState('team');
     const [showCommentInput, setShowCommentInput] = useState(false);
 
-    // Close comment input when clicking outside
+    // Close comment input and selection trigger when clicking outside
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (showCommentInput && !e.target.closest('.comment-popover')) {
+            // Check if clicking outside both the trigger button and the popover
+            const isClickingOutside = !e.target.closest('.comment-popover') &&
+                !e.target.closest('.comment-trigger') &&
+                !e.target.closest('[data-post-content]');
+
+            if ((showCommentInput || selectionState) && isClickingOutside) {
                 setShowCommentInput(false);
                 setSelectionState(null);
+                setCommentText('');
+                window.getSelection().removeAllRanges();
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showCommentInput]);
+    }, [showCommentInput, selectionState]);
 
     const handleApprove = (e) => {
         e.stopPropagation();
@@ -70,31 +77,39 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
         });
     };
 
-    const handleSubmitComment = () => {
-        if (!commentText.trim() || !selectionState) return;
+    const handleSubmitComment = (e) => {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        if (!commentText.trim()) return;
 
         const newComment = {
-            id: Date.now(), // Generate a temp ID
+            id: Date.now(),
             text: commentText,
-            author: currentUser,
+            author: currentUser || 'Current User',
             timestamp: new Date().toISOString(),
             visibility: visibility,
-            selection: {
+            selection: selectionState ? {
                 start: selectionState.start,
                 end: selectionState.end,
                 text: selectionState.text
-            }
+            } : null
         };
 
         if (onAddComment) {
             onAddComment(post.id, newComment);
         }
 
+        // Keep selection state briefly to maintain highlight
         setShowCommentInput(false);
         setCommentText('');
-        setSelectionState(null);
-        // Clear selection
-        window.getSelection().removeAllRanges();
+
+        // Clear selection after a brief delay to allow state update
+        setTimeout(() => {
+            window.getSelection().removeAllRanges();
+        }, 100);
     };
 
     const renderContent = () => {
@@ -129,6 +144,10 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
                         borderBottom: '2px solid #f59e0b',
                         cursor: 'pointer',
                         position: 'relative'
+                    }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (onOpenComments) onOpenComments(post);
                     }}
                 >
                     {post.content.substring(comment.selection.start, comment.selection.end)}
@@ -228,6 +247,7 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
 
                 <div
                     ref={contentRef}
+                    data-post-content
                     onMouseUp={handleTextSelection}
                     style={{ marginBottom: '0.875rem', whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '0.9rem', position: 'relative' }}
                 >
@@ -310,7 +330,12 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
                                     <option value="team">Team only</option>
                                     <option value="all">Visible to all</option>
                                 </select>
-                                <Button size="sm" onClick={handleSubmitComment} disabled={!commentText.trim()}>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={handleSubmitComment}
+                                    disabled={!commentText.trim()}
+                                >
                                     Post
                                 </Button>
                             </div>

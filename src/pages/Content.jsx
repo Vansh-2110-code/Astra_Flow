@@ -117,10 +117,13 @@ const Content = () => {
                     : post
             )
         );
-        setSelectedPost(prev => ({
-            ...prev,
-            comments: [...(prev.comments || []), comment]
-        }));
+        setSelectedPost(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                comments: [...(prev.comments || []), comment]
+            };
+        });
     };
 
     const filteredPosts = getFilteredPosts();

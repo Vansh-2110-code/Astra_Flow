@@ -162,10 +162,10 @@
 
 .calendar-day {
     background: rgba(255, 255, 255, 0.8);
-    height: 140px;
-    min-height: 140px;
-    max-height: 140px;
-    padding: 0.5rem;
+    height: 110px;
+    min-height: 110px;
+    max-height: 110px;
+    padding: 0.4rem;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -203,11 +203,11 @@
 
 .calendar-header {
     background: white;
-    padding: 0.75rem;
+    padding: 0.5rem;
     text-align: center;
     font-weight: 600;
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-size: 0.75rem;
 }
 
 /* Instagram Grid */

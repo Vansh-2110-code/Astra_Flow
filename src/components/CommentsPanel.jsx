@@ -125,6 +125,49 @@ const CommentsPanel = ({ isOpen, onClose, post, onAddComment }) => {
                                             {new Date(comment.timestamp).toLocaleString()}
                                         </span>
                                     </div>
+
+                                    {comment.selection && (
+                                        <div style={{
+                                            padding: '0.75rem',
+                                            background: '#f9fafb',
+                                            borderLeft: '3px solid var(--color-primary)',
+                                            borderRadius: 'var(--radius-sm)',
+                                            marginBottom: '0.75rem',
+                                            fontSize: '0.85rem',
+                                            color: 'var(--text-muted)',
+                                            position: 'relative',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-primary)' }}>
+                                                <span>Replying to:</span>
+                                            </div>
+                                            <div style={{ lineHeight: 1.4 }}>
+                                                {(() => {
+                                                    if (!post.content) return `"${comment.selection.text}"`;
+                                                    const start = comment.selection.start || 0;
+                                                    const end = comment.selection.end || 0;
+                                                    const content = post.content;
+
+                                                    // Show simple snippet if indices are missing or invalid
+                                                    if (start === undefined || end === undefined) return `"${comment.selection.text}"`;
+
+                                                    const prefix = content.substring(Math.max(0, start - 30), start);
+                                                    const suffix = content.substring(end, Math.min(content.length, end + 30));
+
+                                                    return (
+                                                        <>
+                                                            {start > 30 && "..."}{prefix}
+                                                            <span style={{ background: '#fef3c7', color: '#92400e', padding: '0 2px', borderRadius: '2px', fontWeight: 500 }}>
+                                                                {comment.selection.text}
+                                                            </span>
+                                                            {suffix}{end + 30 < content.length && "..."}
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <p style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '0.5rem', lineHeight: 1.5 }}>
                                         {comment.text}
                                     </p>

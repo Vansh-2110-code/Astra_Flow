@@ -11,6 +11,7 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
     const [dragOverDate, setDragOverDate] = useState(null);
     const [hoveredDate, setHoveredDate] = useState(null);
     const [localPosts, setLocalPosts] = useState(posts);
+    const [overflowPopup, setOverflowPopup] = useState(null); // { date: number }
 
     React.useEffect(() => {
         setLocalPosts(posts);
@@ -104,8 +105,11 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
     const handleDrop = (e, date) => {
         e.preventDefault();
         if (draggedPost && date) {
-            const newDate = new Date(year, month, date);
-            const newDateStr = newDate.toISOString().split('T')[0];
+            // Format date properly to avoid timezone issues
+            const yearStr = year.toString();
+            const monthStr = (month + 1).toString().padStart(2, '0');
+            const dateStr = date.toString().padStart(2, '0');
+            const newDateStr = `${yearStr}-${monthStr}-${dateStr}`;
 
             const updatedPosts = localPosts.map(post =>
                 post.id === draggedPost.id
@@ -124,11 +128,14 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
     };
 
     const handleNewPostClick = (date) => {
-        const selectedDate = new Date(year, month, date);
-        const dateStr = selectedDate.toISOString().split('T')[0];
+        // Format date properly to avoid timezone issues
+        const yearStr = year.toString();
+        const monthStr = (month + 1).toString().padStart(2, '0');
+        const dateStr = date.toString().padStart(2, '0');
+        const newDateStr = `${yearStr}-${monthStr}-${dateStr}`;
 
         if (onCreatePost) {
-            onCreatePost(dateStr);
+            onCreatePost(newDateStr);
         }
     };
 
@@ -146,7 +153,7 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
 
     return (
         <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
                 <Button variant="outline" style={{ padding: '8px' }} onClick={handlePrevMonth}>
                     <ChevronLeft size={18} />
                 </Button>
@@ -154,11 +161,11 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                     onClick={handleMonthYearClick}
                     style={{
                         fontWeight: 600,
-                        fontSize: '1.1rem',
+                        fontSize: '1rem',
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
-                        padding: '0.5rem 1rem',
+                        padding: '0.4rem 0.75rem',
                         borderRadius: 'var(--radius-md)',
                         transition: 'all 0.2s',
                         color: 'var(--text-main)'
@@ -320,7 +327,7 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                                 opacity: date ? 1 : 0.3,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                minHeight: '120px' // Ensure uniform height for stacking
+                                minHeight: '110px' // Ensure uniform height for stacking
                             }}
                         >
                             {date && (
@@ -332,7 +339,7 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                                         marginBottom: '0.5rem'
                                     }}>
                                         <span style={{
-                                            fontSize: '0.8rem',
+                                            fontSize: '0.7rem',
                                             color: isTodayDate ? 'var(--color-primary)' : 'var(--text-muted)',
                                             fontWeight: isTodayDate ? 700 : 600
                                         }}>
@@ -345,20 +352,20 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                                                 style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
-                                                    gap: '0.25rem',
-                                                    padding: '0.15rem 0.4rem',
+                                                    gap: '0.15rem',
+                                                    padding: '0.1rem 0.3rem',
                                                     background: 'var(--color-primary)',
                                                     color: 'white',
                                                     border: 'none',
                                                     borderRadius: 'var(--radius-sm)',
-                                                    fontSize: '0.65rem',
+                                                    fontSize: '0.55rem',
                                                     fontWeight: 600,
                                                     cursor: 'pointer',
                                                     boxShadow: '0 2px 6px rgba(99, 102, 241, 0.3)',
                                                     transition: 'all 0.2s',
                                                 }}
                                             >
-                                                <Plus size={10} />
+                                                <Plus size={8} />
                                                 New
                                             </button>
                                         )}
@@ -384,8 +391,8 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                                                         transition: 'all 0.2s',
                                                         overflow: 'hidden',
                                                         display: 'flex',
-                                                        alignItems: 'center', // Horizontal alignment
-                                                        height: '42px', // Fixed height for consistency
+                                                        alignItems: 'center',
+                                                        height: '36px', // Reduced height
                                                         boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                                                     }}
                                                     onMouseEnter={(e) => {
@@ -401,8 +408,8 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                                                 >
                                                     {/* Thumbnail Section */}
                                                     <div style={{
-                                                        width: '42px',
-                                                        height: '42px',
+                                                        width: '36px',
+                                                        height: '36px',
                                                         flexShrink: 0,
                                                         background: '#f3f4f6',
                                                         display: 'flex',
@@ -421,13 +428,13 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                                                                 }}
                                                             />
                                                         ) : (
-                                                            <MediaTypeIcon size={14} className="text-muted" />
+                                                            <MediaTypeIcon size={12} className="text-muted" />
                                                         )}
                                                     </div>
 
                                                     {/* Content Snippet */}
                                                     <div style={{
-                                                        padding: '0 6px',
+                                                        padding: '0 4px',
                                                         flex: 1,
                                                         minWidth: 0,
                                                         display: 'flex',
@@ -437,12 +444,12 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                                                         <div style={{
                                                             display: 'flex',
                                                             alignItems: 'center',
-                                                            gap: '4px',
-                                                            marginBottom: '2px'
+                                                            gap: '2px',
+                                                            marginBottom: '1px'
                                                         }}>
-                                                            {Icon && <Icon size={8} color={post.status === 'Scheduled' ? '#2563eb' : '#6b7280'} />}
+                                                            {Icon && <Icon size={7} color={post.status === 'Scheduled' ? '#2563eb' : '#6b7280'} />}
                                                             <span style={{
-                                                                fontSize: '0.6rem',
+                                                                fontSize: '0.55rem',
                                                                 fontWeight: 600,
                                                                 color: 'var(--text-muted)'
                                                             }}>
@@ -450,7 +457,7 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                                                             </span>
                                                         </div>
                                                         <div style={{
-                                                            fontSize: '0.65rem',
+                                                            fontSize: '0.6rem',
                                                             color: 'var(--text-main)',
                                                             overflow: 'hidden',
                                                             textOverflow: 'ellipsis',
@@ -464,17 +471,35 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                                         })}
 
                                         {remainingPosts > 0 && (
-                                            <div style={{
-                                                fontSize: '0.75rem',
-                                                color: 'var(--text-muted)',
-                                                padding: '2px 4px',
-                                                background: '#f3f4f6',
-                                                borderRadius: '4px',
-                                                textAlign: 'center',
-                                                marginTop: 'auto'
-                                            }}>
+                                            <button
+                                                onClick={(e) => {
+                                                    setOverflowPopup({
+                                                        date
+                                                    });
+                                                }}
+                                                style={{
+                                                    fontSize: '0.65rem',
+                                                    color: 'var(--color-primary)',
+                                                    padding: '3px 6px',
+                                                    background: 'rgba(99, 102, 241, 0.1)',
+                                                    borderRadius: '3px',
+                                                    textAlign: 'center',
+                                                    marginTop: 'auto',
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    fontWeight: 600,
+                                                    transition: 'all 0.2s',
+                                                    width: '100%'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)';
+                                                }}
+                                            >
                                                 +{remainingPosts} more
-                                            </div>
+                                            </button>
                                         )}
                                     </div>
                                 </>
@@ -483,7 +508,209 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
                     );
                 })}
             </div>
-        </div>
+
+            {/* Overflow Popup for "+more" posts */}
+            {overflowPopup && (
+                (() => {
+                    const popupDatePosts = getPostsForDate(overflowPopup.date);
+                    return (
+                        <>
+                            <div
+                                style={{
+                                    position: 'fixed',
+                                    inset: 0,
+                                    background: 'rgba(0, 0, 0, 0.3)',
+                                    zIndex: 999,
+                                    pointerEvents: draggedPost ? 'none' : 'auto'
+                                }}
+                                onClick={() => setOverflowPopup(null)}
+                            />
+                            <div
+                                style={{
+                                    position: 'fixed',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    background: 'white',
+                                    borderRadius: 'var(--radius-lg)',
+                                    padding: '1.5rem',
+                                    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+                                    zIndex: 1000,
+                                    maxWidth: '500px',
+                                    width: '90%',
+                                    maxHeight: '70vh',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    pointerEvents: draggedPost ? 'none' : 'auto'
+                                }}
+                            >
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginBottom: '1rem',
+                                    paddingBottom: '1rem',
+                                    borderBottom: '1px solid var(--input-border)'
+                                }}>
+                                    <h3 className="text-h3">
+                                        Posts for {monthNames[month]} {overflowPopup.date}, {year}
+                                    </h3>
+                                    <button
+                                        onClick={() => setOverflowPopup(null)}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                            color: 'var(--text-muted)',
+                                            padding: '0.5rem',
+                                            borderRadius: 'var(--radius-sm)',
+                                            fontSize: '1.25rem',
+                                            lineHeight: 1
+                                        }}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+
+                                <div
+                                    style={{
+                                        flex: 1,
+                                        overflowY: 'auto',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '0.75rem'
+                                    }}
+                                    onDragOver={handleDragOver}
+                                >
+                                    {popupDatePosts.map(post => {
+                                        const Icon = post.icon;
+                                        const MediaTypeIcon = post.type === 'Reel' || post.type === 'Video' ? Video : ImageIcon;
+
+                                        return (
+                                            <div
+                                                key={post.id}
+                                                draggable={post.status === 'Scheduled'}
+                                                onDragStart={(e) => handleDragStart(e, post)}
+                                                onDragEnd={handleDragEnd}
+                                                style={{
+                                                    background: 'white',
+                                                    border: '1px solid var(--input-border)',
+                                                    borderRadius: 'var(--radius-md)',
+                                                    cursor: post.status === 'Scheduled' ? 'grab' : 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    overflow: 'hidden',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    height: '70px',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                                                    pointerEvents: 'auto'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (post.status === 'Scheduled') {
+                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
+                                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+                                                    e.currentTarget.style.transform = 'translateY(0)';
+                                                }}
+                                            >
+                                                {/* Thumbnail */}
+                                                <div style={{
+                                                    width: '70px',
+                                                    height: '70px',
+                                                    flexShrink: 0,
+                                                    background: '#f3f4f6',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    borderRight: '1px solid var(--input-border)'
+                                                }}>
+                                                    {post.media ? (
+                                                        <img
+                                                            src={post.media}
+                                                            alt=""
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover'
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <MediaTypeIcon size={24} className="text-muted" />
+                                                    )}
+                                                </div>
+
+                                                {/* Content */}
+                                                <div style={{
+                                                    padding: '0.75rem',
+                                                    flex: 1,
+                                                    minWidth: 0,
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '0.25rem'
+                                                }}>
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.5rem'
+                                                    }}>
+                                                        {Icon && <Icon size={14} color={post.status === 'Scheduled' ? '#2563eb' : '#6b7280'} />}
+                                                        <span style={{
+                                                            fontSize: '0.85rem',
+                                                            fontWeight: 600,
+                                                            color: 'var(--text-main)'
+                                                        }}>
+                                                            {post.platform}
+                                                        </span>
+                                                        <span style={{
+                                                            fontSize: '0.7rem',
+                                                            padding: '2px 6px',
+                                                            background: post.status === 'Scheduled' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                                            color: post.status === 'Scheduled' ? '#2563eb' : '#10b981',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 600
+                                                        }}>
+                                                            {post.status}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '0.85rem',
+                                                        color: 'var(--text-main)',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        display: '-webkit-box',
+                                                        WebkitLineClamp: 2,
+                                                        WebkitBoxOrient: 'vertical',
+                                                        lineHeight: 1.4
+                                                    }}>
+                                                        {post.content}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div style={{
+                                    marginTop: '1rem',
+                                    paddingTop: '1rem',
+                                    borderTop: '1px solid var(--input-border)',
+                                    fontSize: '0.85rem',
+                                    color: 'var(--text-muted)',
+                                    textAlign: 'center'
+                                }}>
+                                    {popupDatePosts.filter(p => p.status === 'Scheduled').length > 0
+                                        ? 'Drag scheduled posts to another date to reschedule'
+                                        : 'No scheduled posts to drag'}
+                                </div>
+                            </div >
+                        </>
+                    );
+                })()
+            )}
+        </div >
     );
 };
 
