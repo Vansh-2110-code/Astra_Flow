@@ -7,7 +7,7 @@ export const workspaces = [
         name: "Mint Cloud", 
         posts: 24, 
         activity: "2 hours ago",
-        connectedPlatforms: ['Instagram', 'Facebook', 'LinkedIn']
+        connectedPlatforms: ['Instagram', 'Facebook', 'LinkedIn', 'X (Twitter)', 'YouTube', 'Pinterest', 'Threads', 'TikTok', 'Snapchat', 'Reddit']
     },
     { 
         id: 2, 

@@ -4,20 +4,29 @@ import { X, Send } from 'lucide-react';
 const CommentsPanel = ({ isOpen, onClose, post, onAddComment }) => {
     const [newComment, setNewComment] = useState('');
     const [visibility, setVisibility] = useState('team');
+    const [showToast, setShowToast] = useState(false);
 
     if (!isOpen || !post) return null;
 
     const handleSubmit = (e) => {
+        if (e && typeof e.preventDefault === 'function') e.preventDefault();
+        if (!newComment.trim()) return;
+        onAddComment(post.id, {
+            text: newComment,
+            visibility: visibility,
+            author: 'Current User',
+            timestamp: new Date().toISOString()
+        });
+        setNewComment('');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 2500);
+    };
+
+    const handleFormSubmit = (e) => {
         e.preventDefault();
-        if (newComment.trim()) {
-            onAddComment(post.id, {
-                text: newComment,
-                visibility: visibility,
-                author: 'Current User',
-                timestamp: new Date().toISOString()
-            });
-            setNewComment('');
-        }
+        e.stopPropagation();
+        handleSubmit(e);
+        return false;
     };
 
     const comments = post.comments || [];
@@ -139,7 +148,7 @@ const CommentsPanel = ({ isOpen, onClose, post, onAddComment }) => {
                 </div>
 
                 <form
-                    onSubmit={handleSubmit}
+                    onSubmit={handleFormSubmit}
                     style={{
                         padding: '1.5rem',
                         borderTop: '1px solid var(--input-border)',
@@ -210,8 +219,9 @@ const CommentsPanel = ({ isOpen, onClose, post, onAddComment }) => {
                             }}
                         />
                         <button
-                            type="submit"
+                            type="button"
                             disabled={!newComment.trim()}
+                            onClick={(e) => { e.preventDefault(); handleSubmit(e); }}
                             style={{
                                 position: 'absolute',
                                 right: '0.75rem',
@@ -245,6 +255,27 @@ const CommentsPanel = ({ isOpen, onClose, post, onAddComment }) => {
                         Press Ctrl+Enter to send
                     </div>
                 </form>
+
+                {showToast && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            bottom: '6rem',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            padding: '0.5rem 1rem',
+                            background: '#10b981',
+                            color: 'white',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            zIndex: 1001
+                        }}
+                    >
+                        Comment added
+                    </div>
+                )}
             </div>
         </>
     );

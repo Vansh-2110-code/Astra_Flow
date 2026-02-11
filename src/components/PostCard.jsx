@@ -151,6 +151,7 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
                 onClick={handleApprove}
                 onMouseEnter={() => setShowApproverPopup(true)}
                 onMouseLeave={() => setShowApproverPopup(false)}
+                title={hasUserApproved ? 'Approved' : undefined}
                 style={{
                     position: 'absolute',
                     top: '12px',
@@ -158,16 +159,16 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
                     width: '24px',
                     height: '24px',
                     borderRadius: '50%',
-                    border: `2px solid ${hasUserApproved ? 'var(--color-primary)' : '#d1d5db'}`, // Check specific user approval
-                    background: hasUserApproved ? 'var(--color-primary)' : 'white',
+                    border: `2px solid ${hasUserApproved ? '#10b981' : '#d1d5db'}`,
+                    background: hasUserApproved ? '#10b981' : 'white',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: canApprove ? 'pointer' : 'default',
-                    transition: 'all 0.2s',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s',
                     zIndex: 10,
-                    boxShadow: hasUserApproved ? '0 2px 8px rgba(99, 102, 241, 0.3)' : '0 2px 6px rgba(0, 0, 0, 0.08)',
-                    transform: showApproverPopup && canApprove ? 'scale(1.1)' : 'scale(1)'
+                    boxShadow: hasUserApproved ? '0 2px 8px rgba(16, 185, 129, 0.35)' : '0 2px 6px rgba(0, 0, 0, 0.08)',
+                    transform: hasUserApproved ? 'scale(1.08)' : (showApproverPopup && canApprove ? 'scale(1.1)' : 'scale(1)')
                 }}
             >
                 {hasUserApproved && <CheckCircle size={14} color="white" fill="white" />}
