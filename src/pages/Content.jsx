@@ -14,6 +14,7 @@ import GridView from '../components/views/GridView';
 import ListView from '../components/views/ListView';
 import { Plus } from 'lucide-react';
 import { posts as initialPosts } from '../data/mockData';
+import { useNotifications } from '../contexts/NotificationContext';
 
 const Content = () => {
     const [currentView, setCurrentView] = useState('feed');
@@ -26,6 +27,25 @@ const Content = () => {
     const [posts, setPosts] = useState(initialPosts);
     const [prefilledDate, setPrefilledDate] = useState('');
     const currentUser = 'Admin';
+    
+    const { 
+        checkScheduledPosts, 
+        notifyPostApproved, 
+        notifyComment,
+        notifyNewPost 
+    } = useNotifications();
+
+    // Check for scheduled posts needing approval on mount and periodically
+    useEffect(() => {
+        checkScheduledPosts(posts);
+        
+        // Check every 5 minutes
+        const interval = setInterval(() => {
+            checkScheduledPosts(posts);
+        }, 5 * 60 * 1000);
+
+        return () => clearInterval(interval);
+    }, [posts, checkScheduledPosts]);
 
     const handleFilterClick = (status) => {
         const filteredPosts = getFilteredPosts().filter(post =>
@@ -77,6 +97,9 @@ const Content = () => {
     const handlePostCreated = (newPost) => {
         setPosts(prevPosts => [...prevPosts, newPost]);
         setIsModalOpen(false);
+        
+        // Trigger notification for new post
+        notifyNewPost(newPost, newPost.author || currentUser);
     };
 
     const handleApprovePost = (postId, newApprovedState) => {
@@ -88,6 +111,11 @@ const Content = () => {
                     if (newApprovedState) {
                         if (!updatedApprovedBy.includes(currentUser)) {
                             updatedApprovedBy.push(currentUser);
+                            
+                            // Trigger approval notification
+                            if (post.status !== 'Published') {
+                                notifyPostApproved(post, currentUser, post.author);
+                            }
                         }
                     } else {
                         updatedApprovedBy = updatedApprovedBy.filter(u => u !== currentUser);
@@ -124,6 +152,13 @@ const Content = () => {
                 comments: [...(prev.comments || []), comment]
             };
         });
+        
+        // Trigger comment notification
+        const post = posts.find(p => p.id === postId);
+        if (post) {
+            const isHighlightComment = comment.selection !== null && comment.selection !== undefined;
+            notifyComment(post, comment.author, isHighlightComment);
+        }
     };
 
     const filteredPosts = getFilteredPosts();
