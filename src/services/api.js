@@ -1,4 +1,5 @@
-// src/services/api.js
+// src/services/api.js — general API client.
+// Auth (login/register) is handled by authService.js for backend integration.
 import axios from 'axios';
 
 const api = axios.create({
