@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Loader, CheckCircle, AlertCircle, Chrome } from 'lucide-react';
-import { login } from '../services/api';
+import { login } from '../services/authService';
 import '../styles/login.css';
 
 const Login = () => {
@@ -26,8 +26,10 @@ const Login = () => {
 
             const response = await login(email, password);
             setSuccess(true);
-            // Store token
-            localStorage.setItem('token', response.data.token);
+            // Store tokens
+            localStorage.setItem('access_token', response.access);
+            localStorage.setItem('refresh_token', response.refresh);
+            localStorage.setItem('user', JSON.stringify(response.user));
 
             // Simulate redirect delay
             setTimeout(() => {
@@ -35,7 +37,7 @@ const Login = () => {
             }, 1000);
 
         } catch (err) {
-            setError(err.response?.data?.detail || err.message || 'An error occurred');
+            setError(err.message || 'An error occurred');
         } finally {
             setLoading(false);
         }

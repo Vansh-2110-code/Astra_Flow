@@ -131,13 +131,13 @@ const Step1Credentials = ({ onNext, data, updateData }) => {
 
 // Step 2: First Name, Last Name, Time Zone — submit calls backend (updated backend payload structure)
 const STEP2_TIMEZONES = [
-    'UTC',
-    'Asia/Kolkata (IST)',
-    'America/New_York (EST)',
-    'America/Los_Angeles (PST)',
-    'Europe/London (GMT)',
-    'Europe/Paris (CET)',
-    'Australia/Sydney (AEST)',
+    { label: 'UTC', value: 'UTC' },
+    { label: 'Asia/Kolkata (IST)', value: 'Asia/Kolkata' },
+    { label: 'America/New_York (EST)', value: 'America/New_York' },
+    { label: 'America/Los_Angeles (PST)', value: 'America/Los_Angeles' },
+    { label: 'Europe/London (GMT)', value: 'Europe/London' },
+    { label: 'Europe/Paris (CET)', value: 'Europe/Paris' },
+    { label: 'Australia/Sydney (AEST)', value: 'Australia/Sydney' },
 ];
 
 const Step2Profile = ({ onSubmit, onBack, data, updateData, loading, error }) => {
@@ -190,7 +190,7 @@ const Step2Profile = ({ onSubmit, onBack, data, updateData, loading, error }) =>
                         }}
                     >
                         {STEP2_TIMEZONES.map((tz) => (
-                            <option key={tz} value={tz}>{tz}</option>
+                            <option key={tz.value} value={tz.value}>{tz.label}</option>
                         ))}
                     </select>
                     <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none', display: 'flex' }}>

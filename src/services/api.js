@@ -9,36 +9,4 @@ const api = axios.create({
     },
 });
 
-export const login = async (email, password) => {
-    // In a real scenario, this would hit the backend.
-    // For now, we'll mock the response to test the UI flow.
-
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // Mock Logic
-    if (email === 'demo@lintcollab.io' && password === 'password') {
-        return {
-            data: {
-                token: 'mock-jwt-token-12345',
-                user: {
-                    email: email,
-                    name: 'Demo User'
-                }
-            }
-        };
-    } else {
-        throw {
-            response: {
-                data: {
-                    detail: 'Invalid credentials. Please try again.'
-                }
-            }
-        };
-    }
-
-    // Real implementation:
-    // return api.post('/login/', { email, password });
-};
-
 export default api;
