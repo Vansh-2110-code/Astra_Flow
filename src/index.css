@@ -94,3 +94,108 @@ a:hover {
   text-decoration: underline;
   color: var(--color-accent);
 }
+
+/* Spin animation for loader icons */
+.spin-icon {
+  animation: icon-spin 1s linear infinite;
+}
+
+@keyframes icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Fade-slide-up animation for popups */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Themed Select ── */
+.themed-select {
+  width: 100%;
+  padding: 0.625rem 2.25rem 0.625rem 0.85rem;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background-color: rgba(255, 255, 255, 0.75);
+  backdrop-filter: var(--glass-blur);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--text-main);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+}
+
+.themed-select:hover {
+  border-color: var(--text-muted);
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+.themed-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background-color: white;
+}
+
+.themed-select option {
+  background: white;
+  color: var(--text-main);
+  padding: 0.5rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+}
+
+/* ── Role Tooltip ── */
+.role-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.role-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  padding: 0.6rem 0.85rem;
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+  color: var(--text-main);
+  white-space: nowrap;
+  z-index: 9999;
+  pointer-events: none;
+  animation: fadeSlideUp 0.15s ease-out;
+  line-height: 1.5;
+}
+
+.role-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-bottom-color: var(--input-border);
+}

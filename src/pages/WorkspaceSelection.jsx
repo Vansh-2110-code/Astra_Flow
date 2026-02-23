@@ -1,19 +1,34 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/layout/Topbar';
 import WorkspaceCard from '../components/WorkspaceCard';
 import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
 import { Plus } from 'lucide-react';
-import { workspaces } from '../data/mockData';
+import { getWorkspaces } from '../services/workspaceService';
 
 const WorkspaceSelection = () => {
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [workspaces, setWorkspaces] = useState([]);
 
     const handleWorkspaceClick = (id) => {
         navigate(`/workspace/${id}/content`);
     };
+
+    const fetchWorkspaces = async () => {
+        try {
+            const data = await getWorkspaces();
+            // API may return an array or { results: [...] }
+            const list = Array.isArray(data) ? data : (data.results || data.data || []);
+            setWorkspaces(list);
+        } catch (error) {
+            console.error('Error fetching workspaces:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchWorkspaces();
+    }, []);
 
     return (
         <div className="dashboard-layout" style={{ flexDirection: 'column' }}>

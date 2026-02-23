@@ -178,16 +178,10 @@ const Step2Profile = ({ onSubmit, onBack, data, updateData, loading, error }) =>
                 <label className="input-label-static">Time Zone</label>
                 <div className="input-wrapper" style={{ position: 'relative' }}>
                     <select
-                        className="form-input"
+                        className="themed-select"
                         value={data.timeZone}
                         onChange={(e) => updateData('timeZone', e.target.value)}
-                        style={{
-                            appearance: 'none',
-                            cursor: 'pointer',
-                            backgroundColor: 'white',
-                            color: 'var(--text-main)',
-                            height: '48px'
-                        }}
+                        style={{ height: '48px' }}
                     >
                         {STEP2_TIMEZONES.map((tz) => (
                             <option key={tz.value} value={tz.value}>{tz.label}</option>

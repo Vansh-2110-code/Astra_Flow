@@ -65,8 +65,8 @@ const Analytics = () => {
                     <select
                         value={dateRange}
                         onChange={(e) => setDateRange(e.target.value)}
-                        className="input"
-                        style={{ minWidth: '120px', padding: '0.5rem 2rem 0.5rem 0.75rem', fontSize: '0.9rem' }}
+                        className="themed-select"
+                        style={{ minWidth: '120px', width: 'auto' }}
                     >
                         <option value="7">Last 7 days</option>
                         <option value="30">Last 30 days</option>
@@ -75,8 +75,8 @@ const Analytics = () => {
                     <select
                         value={platformFilter}
                         onChange={(e) => setPlatformFilter(e.target.value)}
-                        className="input"
-                        style={{ minWidth: '140px', padding: '0.5rem 2rem 0.5rem 0.75rem', fontSize: '0.9rem' }}
+                        className="themed-select"
+                        style={{ minWidth: '140px', width: 'auto' }}
                     >
                         <option value="all">All platforms</option>
                         <option value="Instagram">Instagram</option>

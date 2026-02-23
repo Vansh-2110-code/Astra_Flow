@@ -18,8 +18,10 @@ import {
     MessageCircle,
     Globe,
     ChevronDown,
-    Check
+    Check,
+    LogOut
 } from 'lucide-react';
+import { logout, getUserData } from '../../services/authService';
 
 const Sidebar = () => {
     const { workspaceId } = useParams();
@@ -28,6 +30,19 @@ const Sidebar = () => {
     const [connectedAppsOpen, setConnectedAppsOpen] = useState(false);
     const [expandedApp, setExpandedApp] = useState(null);
     const [selectedAccounts, setSelectedAccounts] = useState({ 'Instagram': ['@main_account'], 'Facebook': ['@page1'], 'LinkedIn': ['@profile1'] });
+    const [showUserPopup, setShowUserPopup] = useState(false);
+
+    const user = getUserData();
+    const userName = user
+        ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || 'User'
+        : 'User';
+    const userEmail = user?.email || '';
+    const userInitials = userName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
 
     // Dashboard removed from sidebar per request.
     const navItems = [
@@ -139,12 +154,90 @@ const Sidebar = () => {
                 </div>
             </nav>
 
-            <div style={{ marginTop: 'auto', padding: '0.75rem 0' }}>
-                <div className="nav-item" style={{ padding: '0.5rem 1rem', fontSize: '0.8rem' }}>
-                    <div className="avatar avatar-sm" style={{ background: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '0.7rem' }}>JS</div>
+            {/* User section at bottom with popup */}
+            <div style={{ marginTop: 'auto', padding: '0.75rem 0', position: 'relative' }}>
+                {/* User popup — appears above the avatar card */}
+                {showUserPopup && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            bottom: '100%',
+                            left: '0.5rem',
+                            right: '0.5rem',
+                            marginBottom: '0.5rem',
+                            background: 'var(--glass-bg)',
+                            backdropFilter: 'var(--glass-blur)',
+                            border: '1px solid var(--glass-border)',
+                            borderRadius: 'var(--radius-md)',
+                            boxShadow: 'var(--glass-shadow)',
+                            padding: '0.85rem',
+                            zIndex: 100,
+                            animation: 'fadeSlideUp 0.15s ease-out',
+                        }}
+                        onMouseEnter={() => setShowUserPopup(true)}
+                        onMouseLeave={() => setShowUserPopup(false)}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.65rem' }}>
+                            <div style={{
+                                width: 36, height: 36, borderRadius: '50%',
+                                background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'white', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0,
+                            }}>
+                                {userInitials}
+                            </div>
+                            <div style={{ overflow: 'hidden' }}>
+                                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {userName}
+                                </div>
+                                {userEmail && (
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {userEmail}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div style={{ height: 1, background: 'var(--input-border)', margin: '0.25rem 0 0.5rem' }} />
+                        <button
+                            onClick={logout}
+                            style={{
+                                width: '100%',
+                                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                padding: '0.45rem 0.5rem',
+                                border: 'none', borderRadius: 'var(--radius-sm)',
+                                background: 'transparent', cursor: 'pointer',
+                                fontSize: '0.8rem', fontWeight: 500,
+                                color: '#ef4444',
+                                transition: 'background 0.15s',
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                            <LogOut size={15} />
+                            Log Out
+                        </button>
+                    </div>
+                )}
+
+                {/* User card trigger */}
+                <div
+                    className="nav-item"
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', cursor: 'pointer' }}
+                    onMouseEnter={() => setShowUserPopup(true)}
+                    onMouseLeave={() => setShowUserPopup(false)}
+                >
+                    <div className="avatar avatar-sm" style={{
+                        background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: 'white', fontSize: '0.7rem', fontWeight: 600,
+                    }}>
+                        {userInitials}
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 500 }}>John Smith</span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Admin</span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 500 }}>{userName}</span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            {userEmail ? userEmail : 'Member'}
+                        </span>
                     </div>
                 </div>
             </div>

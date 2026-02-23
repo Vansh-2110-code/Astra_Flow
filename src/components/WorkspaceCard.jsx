@@ -1,9 +1,18 @@
 
 import React from 'react';
 import Card from './ui/Card';
-import { FileText, Clock } from 'lucide-react';
+import { Globe, Shield } from 'lucide-react';
+
+const roleBadgeColors = {
+    admin: { bg: 'rgba(99,102,241,0.08)', color: '#6366f1' },
+    editor: { bg: 'rgba(16,185,129,0.08)', color: '#10b981' },
+    viewer: { bg: 'rgba(107,114,128,0.08)', color: '#6b7280' },
+};
 
 const WorkspaceCard = ({ workspace, onClick }) => {
+    const roleKey = (workspace.role || '').toLowerCase();
+    const badge = roleBadgeColors[roleKey] || roleBadgeColors.viewer;
+
     return (
         <Card className="workspace-card" hover={true} onClick={onClick}>
             <div>
@@ -17,13 +26,25 @@ const WorkspaceCard = ({ workspace, onClick }) => {
 
             <div style={{ paddingTop: '1rem', borderTop: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <FileText size={14} />
-                    <span>{workspace.posts} posts</span>
+                    <Shield size={14} />
+                    <span style={{
+                        padding: '2px 10px',
+                        borderRadius: '999px',
+                        fontSize: '0.75rem',
+                        fontWeight: 500,
+                        background: badge.bg,
+                        color: badge.color,
+                        textTransform: 'capitalize',
+                    }}>
+                        {workspace.role || 'Member'}
+                    </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Clock size={14} />
-                    <span>{workspace.activity}</span>
-                </div>
+                {workspace.timezone && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Globe size={14} />
+                        <span>{workspace.timezone}</span>
+                    </div>
+                )}
             </div>
         </Card>
     );

@@ -319,13 +319,8 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
                                 <select
                                     value={visibility}
                                     onChange={(e) => setVisibility(e.target.value)}
-                                    style={{
-                                        border: 'none',
-                                        fontSize: '0.75rem',
-                                        color: 'var(--text-muted)',
-                                        cursor: 'pointer',
-                                        outline: 'none'
-                                    }}
+                                    className="themed-select"
+                                    style={{ width: 'auto', fontSize: '0.75rem', padding: '0.3rem 1.75rem 0.3rem 0.5rem' }}
                                 >
                                     <option value="team">Team only</option>
                                     <option value="all">Visible to all</option>

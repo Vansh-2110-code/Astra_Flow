@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import Card from './ui/Card';
 import Input from './ui/Input';
 import Button from './ui/Button';
-import { X, Plus, Trash2, Globe, Mail, User, ArrowRight, ArrowLeft, CheckCircle, Link2 } from 'lucide-react';
+import { X, Plus, Trash2, Globe, Mail, User, ArrowRight, ArrowLeft, CheckCircle, Link2, SkipForward, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SocialPlatformCard, { platforms } from './SocialPlatformCard';
 import { AnimatePresence, motion } from 'framer-motion';
+import { createWorkspace, inviteToWorkspace } from '../services/workspaceService';
 
 // Social Connect Modal Component
 const SocialConnectModal = ({ isOpen, platform, onClose, onConnectReal, onConnectMock }) => {
@@ -24,22 +25,22 @@ const SocialConnectModal = ({ isOpen, platform, onClose, onConnectReal, onConnec
             padding: '1rem',
             backdropFilter: 'blur(4px)'
         }}>
-            <Card style={{ 
-                width: '100%', 
-                maxWidth: '450px', 
-                background: 'white', 
+            <Card style={{
+                width: '100%',
+                maxWidth: '450px',
+                background: 'white',
                 position: 'relative',
                 padding: '2rem'
             }}>
                 <button
                     onClick={onClose}
-                    style={{ 
-                        position: 'absolute', 
-                        top: '1rem', 
-                        right: '1rem', 
-                        background: 'none', 
-                        border: 'none', 
-                        cursor: 'pointer', 
+                    style={{
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
                         color: 'var(--text-muted)',
                         transition: 'color 0.2s',
                         padding: '0.5rem',
@@ -55,11 +56,11 @@ const SocialConnectModal = ({ isOpen, platform, onClose, onConnectReal, onConnec
                 </button>
 
                 <div style={{ marginBottom: '2rem', paddingRight: '2rem' }}>
-                    <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '1rem', 
-                        marginBottom: '1rem' 
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        marginBottom: '1rem'
                     }}>
                         <div style={{
                             width: 48,
@@ -84,11 +85,11 @@ const SocialConnectModal = ({ isOpen, platform, onClose, onConnectReal, onConnec
                     </div>
                 </div>
 
-                <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
                     gap: '1rem',
-                    marginBottom: '1.5rem' 
+                    marginBottom: '1.5rem'
                 }}>
                     <button
                         onClick={() => {
@@ -168,8 +169,8 @@ const SocialConnectModal = ({ isOpen, platform, onClose, onConnectReal, onConnec
                 </div>
 
                 <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--input-border)' }}>
-                    <Button 
-                        variant="ghost" 
+                    <Button
+                        variant="ghost"
                         onClick={onClose}
                         style={{ width: '100%' }}
                     >
@@ -181,11 +182,15 @@ const SocialConnectModal = ({ isOpen, platform, onClose, onConnectReal, onConnec
     );
 };
 
-const Step1Details = ({ name, setName, timezone, setTimezone, onNext, onCancel, error }) => {
+const Step1Details = ({ name, setName, timezone, setTimezone, onNext, onCancel, error, loading }) => {
     const timezones = [
-        "UTC", "Asia/Kolkata (IST)", "America/New_York (EST)",
-        "America/Los_Angeles (PST)", "Europe/London (GMT)",
-        "Europe/Paris (CET)", "Australia/Sydney (AEST)"
+        { label: "UTC", value: "UTC" },
+        { label: "Asia/Kolkata (IST)", value: "Asia/Kolkata" },
+        { label: "America/New_York (EST)", value: "America/New_York" },
+        { label: "America/Los_Angeles (PST)", value: "America/Los_Angeles" },
+        { label: "Europe/London (GMT)", value: "Europe/London" },
+        { label: "Europe/Paris (CET)", value: "Europe/Paris" },
+        { label: "Australia/Sydney (AEST)", value: "Australia/Sydney" },
     ];
 
     return (
@@ -233,49 +238,21 @@ const Step1Details = ({ name, setName, timezone, setTimezone, onNext, onCancel, 
                 </label>
                 <div style={{ position: 'relative' }}>
                     <select
-                        className="input"
+                        className="themed-select"
                         value={timezone}
                         onChange={(e) => setTimezone(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '0.75rem 2.5rem 0.75rem 1rem',
-                            border: '1px solid var(--input-border)',
-                            borderRadius: '8px',
-                            fontSize: '0.95rem',
-                            transition: 'all 0.2s',
-                            background: 'white',
-                            color: 'var(--text-main)',
-                            cursor: 'pointer',
-                            appearance: 'none',
-                            WebkitAppearance: 'none',
-                            MozAppearance: 'none'
-                        }}
-                        onFocus={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--color-primary)';
-                            e.currentTarget.style.outline = 'none';
-                        }}
-                        onBlur={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--input-border)';
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = 'var(--text-muted)';
-                        }}
-                        onMouseLeave={(e) => {
-                            if (document.activeElement !== e.currentTarget) {
-                                e.currentTarget.style.borderColor = 'var(--input-border)';
-                            }
-                        }}
+                        style={{ padding: '0.75rem 2.5rem 0.75rem 1rem' }}
                     >
                         {timezones.map(tz => (
-                            <option key={tz} value={tz}>{tz}</option>
+                            <option key={tz.value} value={tz.value}>{tz.label}</option>
                         ))}
                     </select>
-                    <div style={{ 
-                        position: 'absolute', 
-                        right: '1rem', 
-                        top: '50%', 
-                        transform: 'translateY(-50%)', 
-                        color: 'var(--text-muted)', 
+                    <div style={{
+                        position: 'absolute',
+                        right: '1rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: 'var(--text-muted)',
                         pointerEvents: 'none',
                         display: 'flex',
                         alignItems: 'center'
@@ -286,35 +263,46 @@ const Step1Details = ({ name, setName, timezone, setTimezone, onNext, onCancel, 
             </div>
 
             {/* Footer with buttons */}
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'flex-end', 
+            <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
                 alignItems: 'center',
-                gap: '1rem', 
-                paddingTop: '1.5rem', 
+                gap: '1rem',
+                paddingTop: '1.5rem',
                 marginTop: '1.5rem',
-                borderTop: '1px solid var(--input-border)' 
+                borderTop: '1px solid var(--input-border)'
             }}>
-                <Button variant="secondary" onClick={onCancel}>
+                <Button variant="secondary" onClick={onCancel} disabled={loading}>
                     Cancel
                 </Button>
-                <Button 
-                    variant="primary" 
-                    onClick={onNext} 
-                    disabled={!name.trim()}
+                <Button
+                    variant="primary"
+                    onClick={onNext}
+                    disabled={!name.trim() || loading}
                     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
-                    Next <ArrowRight size={16} />
+                    {loading ? (
+                        <><Loader2 size={16} className="spin-icon" /> Creating...</>
+                    ) : (
+                        <>Next <ArrowRight size={16} /></>
+                    )}
                 </Button>
             </div>
         </motion.div>
     );
 };
 
-const Step2Members = ({ members, setMembers, onNext, onBack }) => {
-    const roles = ["Admin", "Approver", "Contributor", "Writer", "Guest"];
+const ROLE_DESCRIPTIONS = {
+    Admin: 'Full access — create, edit, approve, delete posts, manage members & settings',
+    Editor: 'Can create, edit & schedule posts',
+    Viewer: 'Read-only — can view posts',
+};
 
-    const addMember = () => setMembers([...members, { email: '', role: 'Contributor' }]);
+const Step2Members = ({ members, setMembers, onNext, onBack, onSkip, loading }) => {
+    const roles = ["Admin", "Editor", "Viewer"];
+    const [hoveredRole, setHoveredRole] = useState(null);
+
+    const addMember = () => setMembers([...members, { email: '', role: 'Editor' }]);
 
     const removeMember = (index) => {
         if (members.length > 1) {
@@ -365,45 +353,49 @@ const Step2Members = ({ members, setMembers, onNext, onBack }) => {
                                 }}
                             />
                         </div>
-                        <div style={{ flex: 1.5, position: 'relative' }}>
-                            <select
-                                className="input"
-                                value={member.role}
-                                onChange={(e) => updateMember(index, 'role', e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.75rem 2.5rem 0.75rem 1rem',
-                                    border: '1px solid var(--input-border)',
-                                    borderRadius: '8px',
-                                    fontSize: '0.95rem',
-                                    transition: 'all 0.2s',
-                                    background: 'white',
-                                    cursor: 'pointer',
-                                    appearance: 'none',
-                                    WebkitAppearance: 'none',
-                                    MozAppearance: 'none'
-                                }}
-                                onFocus={(e) => {
-                                    e.currentTarget.style.borderColor = 'var(--color-primary)';
-                                    e.currentTarget.style.outline = 'none';
-                                }}
-                                onBlur={(e) => {
-                                    e.currentTarget.style.borderColor = 'var(--input-border)';
-                                }}
-                            >
-                                {roles.map(r => <option key={r} value={r}>{r}</option>)}
-                            </select>
-                            <div style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }}>
-                                <User size={16} />
-                            </div>
+                        <div style={{ flex: 1.5, display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            {roles.map(r => {
+                                const active = member.role === r;
+                                const roleKey = `${index}-${r}`;
+                                return (
+                                    <div key={r} className="role-tooltip-wrapper"
+                                        onMouseEnter={() => setHoveredRole(roleKey)}
+                                        onMouseLeave={() => setHoveredRole(null)}
+                                    >
+                                        {hoveredRole === roleKey && (
+                                            <div className="role-tooltip">
+                                                <strong>{r}:</strong> {ROLE_DESCRIPTIONS[r]}
+                                            </div>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => updateMember(index, 'role', r)}
+                                            style={{
+                                                padding: '0.4rem 0.75rem',
+                                                fontSize: '0.8rem',
+                                                borderRadius: '999px',
+                                                border: `1px solid ${active ? 'var(--color-primary)' : 'var(--input-border)'}`,
+                                                background: active ? 'rgba(99,102,241,0.08)' : 'transparent',
+                                                color: active ? 'var(--color-primary)' : 'var(--text-muted)',
+                                                cursor: 'pointer',
+                                                fontWeight: active ? 600 : 400,
+                                                transition: 'all 0.15s',
+                                                fontFamily: 'var(--font-body)',
+                                            }}
+                                        >
+                                            {r}
+                                        </button>
+                                    </div>
+                                );
+                            })}
                         </div>
                         {members.length > 1 && (
                             <button
                                 type="button"
                                 onClick={() => removeMember(index)}
                                 className="btn-ghost"
-                                style={{ 
-                                    color: 'var(--input-error)', 
+                                style={{
+                                    color: 'var(--input-error)',
                                     padding: '0.75rem 0.5rem',
                                     minHeight: '48px',
                                     display: 'flex',
@@ -424,12 +416,12 @@ const Step2Members = ({ members, setMembers, onNext, onBack }) => {
                     type="button"
                     className="btn-ghost"
                     onClick={addMember}
-                    style={{ 
-                        color: 'var(--color-primary)', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '0.5rem', 
-                        fontWeight: 500, 
+                    style={{
+                        color: 'var(--color-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontWeight: 500,
                         marginTop: '1rem',
                         padding: '0.5rem 0.75rem',
                         borderRadius: '8px',
@@ -443,29 +435,52 @@ const Step2Members = ({ members, setMembers, onNext, onBack }) => {
             </div>
 
             {/* Footer with proper spacing */}
-            <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
                 gap: '1rem',
                 paddingTop: '1.5rem',
                 marginTop: '1.5rem',
-                borderTop: '1px solid var(--input-border)' 
+                borderTop: '1px solid var(--input-border)'
             }}>
-                <Button 
-                    variant="secondary" 
+                <Button
+                    variant="secondary"
                     onClick={onBack}
+                    disabled={loading}
                     style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
                     <ArrowLeft size={16} /> Back
                 </Button>
-                <Button 
-                    variant="primary" 
-                    onClick={onNext}
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                >
-                    Next <ArrowRight size={16} />
-                </Button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Button
+                        variant="ghost"
+                        onClick={onSkip}
+                        disabled={loading}
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            color: 'var(--text-muted)',
+                            fontWeight: 500,
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        Skip <SkipForward size={14} />
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={onNext}
+                        disabled={loading}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                        {loading ? (
+                            <><Loader2 size={16} className="spin-icon" /> Sending...</>
+                        ) : (
+                            <>Next <ArrowRight size={16} /></>
+                        )}
+                    </Button>
+                </div>
             </div>
         </motion.div>
     );
@@ -502,14 +517,14 @@ const Step3Socials = ({ connected, setConnected, onSubmit, onBack }) => {
                     <p className="text-muted">Add your social media pages to this workspace.</p>
                 </div>
 
-                <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
-                    gap: '1rem', 
-                    marginBottom: '2rem', 
-                    maxHeight: '400px', 
-                    overflowY: 'auto', 
-                    paddingRight: '0.5rem' 
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                    gap: '1rem',
+                    marginBottom: '2rem',
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    paddingRight: '0.5rem'
                 }}>
                     {platforms.map(p => (
                         <SocialPlatformCard
@@ -522,24 +537,24 @@ const Step3Socials = ({ connected, setConnected, onSubmit, onBack }) => {
                 </div>
 
                 {/* Footer with proper spacing */}
-                <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
+                <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     gap: '1rem',
                     paddingTop: '1.5rem',
                     marginTop: '1.5rem',
-                    borderTop: '1px solid var(--input-border)' 
+                    borderTop: '1px solid var(--input-border)'
                 }}>
-                    <Button 
-                        variant="secondary" 
+                    <Button
+                        variant="secondary"
                         onClick={onBack}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                     >
                         <ArrowLeft size={16} /> Back
                     </Button>
-                    <Button 
-                        variant="primary" 
+                    <Button
+                        variant="primary"
                         onClick={onSubmit}
                         style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                     >
@@ -567,29 +582,77 @@ const CreateWorkspaceModal = ({ isOpen, onClose }) => {
     const [step, setStep] = useState(1);
     const [name, setName] = useState('');
     const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
-    const [members, setMembers] = useState([{ email: '', role: 'Contributor' }]);
+    const [members, setMembers] = useState([{ email: '', role: 'Editor' }]);
     const [connectedSocials, setConnectedSocials] = useState([]);
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [createdWorkspaceId, setCreatedWorkspaceId] = useState(null);
 
     if (!isOpen) return null;
 
-    const handleNext = () => {
-        if (step === 1 && !name.trim()) {
-            setError('Please enter a workspace name');
+    const handleNext = async () => {
+        if (step === 1) {
+            if (!name.trim()) {
+                setError('Please enter a workspace name');
+                return;
+            }
+            setError('');
+            setLoading(true);
+            try {
+                const result = await createWorkspace(name.trim(), timezone);
+                console.log('Workspace created:', result);
+                setCreatedWorkspaceId(result.data.id);
+                setStep(2);
+            } catch (err) {
+                console.error('Workspace creation failed:', err);
+                setError(err.message || 'Failed to create workspace');
+            } finally {
+                setLoading(false);
+            }
             return;
         }
+
+        if (step === 2) {
+            // Send invitations for members with non-empty emails
+            const validMembers = members.filter(m => m.email && m.email.trim());
+            if (validMembers.length > 0 && createdWorkspaceId) {
+                setLoading(true);
+                try {
+                    const results = await Promise.allSettled(
+                        validMembers.map(m =>
+                            inviteToWorkspace(createdWorkspaceId, m.email.trim(), m.role.toLowerCase())
+                        )
+                    );
+                    const failed = results.filter(r => r.status === 'rejected');
+                    if (failed.length > 0) {
+                        console.warn(`${failed.length} invitation(s) failed:`, failed);
+                    }
+                    console.log('Invitations sent:', results);
+                } catch (err) {
+                    console.error('Invitation error:', err);
+                } finally {
+                    setLoading(false);
+                }
+            }
+            setStep(3);
+            return;
+        }
+
         setError('');
         setStep(step + 1);
+    };
+
+    const handleSkipMembers = () => {
+        setStep(3);
     };
 
     const handleBack = () => setStep(step - 1);
 
     const handleSubmit = () => {
-        // Mock API Call
-        console.log("Created Workspace", { name, timezone, members, connectedSocials });
-        const newId = Date.now();
+        const workspaceId = createdWorkspaceId || Date.now();
+        console.log('Finalizing workspace', { workspaceId, name, timezone, members, connectedSocials });
         onClose();
-        navigate(`/workspace/${newId}/content`);
+        navigate(`/workspace/${workspaceId}/content`);
     };
 
     return (
@@ -604,16 +667,16 @@ const CreateWorkspaceModal = ({ isOpen, onClose }) => {
             padding: '1rem',
             backdropFilter: 'blur(4px)'
         }}>
-            <Card 
-                className="modal-content" 
-                style={{ 
-                    width: '100%', 
-                    maxWidth: '700px', 
-                    background: 'white', 
-                    maxHeight: '90vh', 
-                    overflowY: 'auto', 
-                    position: 'relative', 
-                    display: 'flex', 
+            <Card
+                className="modal-content"
+                style={{
+                    width: '100%',
+                    maxWidth: '700px',
+                    background: 'white',
+                    maxHeight: '90vh',
+                    overflowY: 'auto',
+                    position: 'relative',
+                    display: 'flex',
                     flexDirection: 'column',
                     padding: '2rem'
                 }}
@@ -621,14 +684,14 @@ const CreateWorkspaceModal = ({ isOpen, onClose }) => {
                 {/* Close Button - properly positioned to avoid collision */}
                 <button
                     onClick={onClose}
-                    style={{ 
-                        position: 'absolute', 
-                        top: '1.5rem', 
-                        right: '1.5rem', 
-                        background: 'none', 
-                        border: 'none', 
-                        cursor: 'pointer', 
-                        color: 'var(--text-muted)', 
+                    style={{
+                        position: 'absolute',
+                        top: '1.5rem',
+                        right: '1.5rem',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
                         zIndex: 10,
                         padding: '0.5rem',
                         display: 'flex',
@@ -650,22 +713,22 @@ const CreateWorkspaceModal = ({ isOpen, onClose }) => {
                 </button>
 
                 {/* Progress Indicator - with padding to avoid close button */}
-                <div style={{ 
-                    display: 'flex', 
-                    gap: '0.5rem', 
-                    marginBottom: '2.5rem', 
+                <div style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    marginBottom: '2.5rem',
                     marginTop: '0.25rem',
                     paddingRight: '3rem'
                 }}>
                     {[1, 2, 3].map(s => (
-                        <div 
-                            key={s} 
-                            style={{ 
-                                flex: 1, 
-                                height: 4, 
-                                borderRadius: 2, 
-                                background: s <= step ? 'var(--color-primary)' : 'var(--input-border)', 
-                                transition: 'all 0.3s' 
+                        <div
+                            key={s}
+                            style={{
+                                flex: 1,
+                                height: 4,
+                                borderRadius: 2,
+                                background: s <= step ? 'var(--color-primary)' : 'var(--input-border)',
+                                transition: 'all 0.3s'
                             }}
                         ></div>
                     ))}
@@ -680,6 +743,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose }) => {
                             onNext={handleNext}
                             onCancel={onClose}
                             error={error}
+                            loading={loading}
                         />
                     )}
                     {step === 2 && (
@@ -688,6 +752,8 @@ const CreateWorkspaceModal = ({ isOpen, onClose }) => {
                             members={members} setMembers={setMembers}
                             onNext={handleNext}
                             onBack={handleBack}
+                            onSkip={handleSkipMembers}
+                            loading={loading}
                         />
                     )}
                     {step === 3 && (

@@ -97,17 +97,7 @@ const FilterDropdown = ({ onFilterChange }) => {
                             <select
                                 value={filters.postType}
                                 onChange={(e) => setFilters({ ...filters, postType: e.target.value })}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.625rem 0.75rem',
-                                    border: '1px solid var(--input-border)',
-                                    borderRadius: 'var(--radius-md)',
-                                    background: 'white',
-                                    fontSize: '0.875rem',
-                                    color: 'var(--text-main)',
-                                    cursor: 'pointer',
-                                    outline: 'none'
-                                }}
+                                className="themed-select"
                             >
                                 <option value="">All Types</option>
                                 {postTypes.map(type => (
@@ -129,17 +119,7 @@ const FilterDropdown = ({ onFilterChange }) => {
                             <select
                                 value={filters.platform}
                                 onChange={(e) => setFilters({ ...filters, platform: e.target.value })}
-                                style={{
-                                    width: '100%',
-                                    padding: '0.625rem 0.75rem',
-                                    border: '1px solid var(--input-border)',
-                                    borderRadius: 'var(--radius-md)',
-                                    background: 'white',
-                                    fontSize: '0.875rem',
-                                    color: 'var(--text-main)',
-                                    cursor: 'pointer',
-                                    outline: 'none'
-                                }}
+                                className="themed-select"
                             >
                                 <option value="">All Platforms</option>
                                 {platforms.map(platform => (

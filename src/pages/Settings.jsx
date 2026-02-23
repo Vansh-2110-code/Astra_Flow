@@ -16,8 +16,8 @@ const TABS = [
     { id: 'dangerZone', label: 'Danger Zone', icon: AlertTriangle }
 ];
 
-const ROLES = ['Admin', 'Approver', 'Contributor', 'Viewer'];
-const PERMISSIONS = ['Create Post', 'Edit Post', 'Approve', 'Publish', 'Delete', 'Manage Team'];
+const ROLES = ['Admin', 'Editor', 'Viewer'];
+const PERMISSIONS = ['Create Post', 'Edit Post', 'Approve', 'Publish', 'Schedule', 'Delete', 'Manage Team'];
 
 const INTEGRATION_APPS = [
     { id: 'canva', name: 'Canva' },
@@ -32,7 +32,13 @@ const defaultMatrix = () => {
     ROLES.forEach(role => {
         PERMISSIONS.forEach(perm => {
             const key = `${role}-${perm}`;
-            m[key] = role === 'Admin' || (role === 'Approver' && (perm === 'Approve' || perm === 'Edit Post'));
+            if (role === 'Admin') {
+                m[key] = true;
+            } else if (role === 'Editor') {
+                m[key] = ['Create Post', 'Edit Post', 'Schedule'].includes(perm);
+            } else {
+                m[key] = false; // Viewer — read-only
+            }
         });
     });
     return m;

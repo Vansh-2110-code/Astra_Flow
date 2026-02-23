@@ -1,26 +1,50 @@
-// Added: Team members UI (mock, non-breaking). Invite side panel – Plannable-style; no backend.
+// Invite member panel — calls inviteToWorkspace API.
 import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import Card from './ui/Card';
 import Button from './ui/Button';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
+import { inviteToWorkspace } from '../services/workspaceService';
+
+const ROLE_DESCRIPTIONS = {
+    Admin: 'Full access — create, edit, approve, delete posts, manage members & settings',
+    Editor: 'Can create, edit & schedule posts',
+    Viewer: 'Read-only — can view posts',
+};
 
 const ROLES = ['Admin', 'Editor', 'Viewer'];
 
 const InviteMemberModal = ({ isOpen, onClose, onInvite }) => {
+    const { workspaceId } = useParams();
     const [email, setEmail] = useState('');
     const [role, setRole] = useState('Editor');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [hoveredRole, setHoveredRole] = useState(null);
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const trimmed = email.trim();
-        if (!trimmed) return;
-        const name = trimmed.split('@')[0] || 'Invited User';
-        onInvite({ id: Date.now(), name, email: trimmed, role, status: 'Invited' });
-        setEmail('');
-        setRole('Editor');
-        onClose();
+        if (!trimmed || !workspaceId) return;
+
+        setLoading(true);
+        setError('');
+        try {
+            await inviteToWorkspace(workspaceId, trimmed, role.toLowerCase());
+            // Add to local list so UI updates immediately
+            const name = trimmed.split('@')[0] || 'Invited User';
+            onInvite({ id: Date.now(), name, email: trimmed, role, status: 'Invited' });
+            setEmail('');
+            setRole('Editor');
+            onClose();
+        } catch (err) {
+            console.error('Invite failed:', err);
+            setError(err.message || 'Failed to send invite');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -51,12 +75,13 @@ const InviteMemberModal = ({ isOpen, onClose, onInvite }) => {
                     <div>
                         <h2 className="text-h3" style={{ fontSize: '1.05rem' }}>Invite member</h2>
                         <p className="text-sm text-muted" style={{ marginTop: '0.25rem', fontSize: '0.8rem' }}>
-                            Add collaborators to this workspace. Roles are visual only.
+                            Add collaborators to this workspace.
                         </p>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
+                        disabled={loading}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0.35rem', borderRadius: '999px' }}
                     >
                         <X size={18} />
@@ -73,8 +98,9 @@ const InviteMemberModal = ({ isOpen, onClose, onInvite }) => {
                             className="input"
                             placeholder="colleague@example.com"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(e) => { setEmail(e.target.value); setError(''); }}
                             style={{ width: '100%' }}
+                            disabled={loading}
                         />
                     </div>
 
@@ -86,33 +112,58 @@ const InviteMemberModal = ({ isOpen, onClose, onInvite }) => {
                             {ROLES.map((r) => {
                                 const active = role === r;
                                 return (
-                                    <button
-                                        key={r}
-                                        type="button"
-                                        className="btn btn-outline"
-                                        style={{
-                                            padding: '0.35rem 0.9rem',
-                                            fontSize: '0.8rem',
-                                            borderRadius: '999px',
-                                            borderColor: active ? 'var(--color-primary)' : undefined,
-                                            background: active ? 'rgba(99,102,241,0.06)' : 'transparent',
-                                            color: active ? 'var(--color-primary)' : 'var(--text-muted)'
-                                        }}
-                                        onClick={() => setRole(r)}
+                                    <div key={r} className="role-tooltip-wrapper"
+                                        onMouseEnter={() => setHoveredRole(r)}
+                                        onMouseLeave={() => setHoveredRole(null)}
                                     >
-                                        {r}
-                                    </button>
+                                        {hoveredRole === r && (
+                                            <div className="role-tooltip">
+                                                <strong>{r}:</strong> {ROLE_DESCRIPTIONS[r]}
+                                            </div>
+                                        )}
+                                        <button
+                                            type="button"
+                                            className="btn btn-outline"
+                                            disabled={loading}
+                                            style={{
+                                                padding: '0.35rem 0.9rem',
+                                                fontSize: '0.8rem',
+                                                borderRadius: '999px',
+                                                borderColor: active ? 'var(--color-primary)' : undefined,
+                                                background: active ? 'rgba(99,102,241,0.06)' : 'transparent',
+                                                color: active ? 'var(--color-primary)' : 'var(--text-muted)'
+                                            }}
+                                            onClick={() => setRole(r)}
+                                        >
+                                            {r}
+                                        </button>
+                                    </div>
                                 );
                             })}
                         </div>
                     </div>
 
+                    {error && (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--input-error)', padding: '0.5rem 0' }}>
+                            {error}
+                        </div>
+                    )}
+
                     <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--input-border)', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                        <Button type="button" variant="ghost" onClick={onClose}>
+                        <Button type="button" variant="ghost" onClick={onClose} disabled={loading}>
                             Cancel
                         </Button>
-                        <Button type="submit" variant="primary" disabled={!email.trim()}>
-                            Send invite
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            disabled={!email.trim() || loading}
+                            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        >
+                            {loading ? (
+                                <><Loader2 size={16} className="spin-icon" /> Sending...</>
+                            ) : (
+                                'Send invite'
+                            )}
                         </Button>
                     </div>
                 </form>
