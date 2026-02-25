@@ -70,20 +70,13 @@ const FilterDropdown = ({ onFilterChange }) => {
                         }}
                         onClick={() => setIsOpen(false)}
                     />
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 'calc(100% + 8px)',
-                            left: 0,
-                            minWidth: '320px',
-                            background: 'white',
-                            border: '1px solid var(--input-border)',
-                            borderRadius: 'var(--radius-md)',
-                            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-                            padding: '1.5rem',
-                            zIndex: 100
-                        }}
-                    >
+                    <div className="dropdown-menu-premium" style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 8px)',
+                        left: 0,
+                        minWidth: '320px',
+                        padding: '1.5rem',
+                    }}>
                         <div style={{ marginBottom: '1.25rem' }}>
                             <label style={{
                                 display: 'block',

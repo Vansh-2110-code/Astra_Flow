@@ -10,19 +10,22 @@ const WorkspaceSelection = () => {
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [workspaces, setWorkspaces] = useState([]);
+    const [error, setError] = useState('');
 
     const handleWorkspaceClick = (id) => {
         navigate(`/workspace/${id}/content`);
     };
 
     const fetchWorkspaces = async () => {
+        setError('');
         try {
             const data = await getWorkspaces();
             // API may return an array or { results: [...] }
             const list = Array.isArray(data) ? data : (data.results || data.data || []);
             setWorkspaces(list);
-        } catch (error) {
-            console.error('Error fetching workspaces:', error);
+        } catch (err) {
+            console.error('Error fetching workspaces:', err);
+            setError(err.message || 'Failed to load workspaces');
         }
     };
 
@@ -41,6 +44,24 @@ const WorkspaceSelection = () => {
                         <h1 className="text-h1">Select Workspace</h1>
                         <p className="text-muted">Choose a workspace to start collaborating.</p>
                     </div>
+
+                    {error && (
+                        <div style={{
+                            padding: '1.5rem',
+                            background: 'rgba(239, 68, 68, 0.05)',
+                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                            borderRadius: '12px',
+                            color: 'var(--input-error)',
+                            marginBottom: '2rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem',
+                            fontSize: '0.9rem'
+                        }}>
+                            <Plus size={18} style={{ transform: 'rotate(45deg)' }} />
+                            <span>{error}</span>
+                        </div>
+                    )}
 
                     <div className="workspace-grid">
                         <div

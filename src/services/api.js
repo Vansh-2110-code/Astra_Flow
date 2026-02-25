@@ -101,11 +101,40 @@ api.interceptors.response.use(
         }
 
         // For all other errors, parse the backend message
-        const message =
-            error.response?.data?.message ||
-            error.response?.data?.detail ||
-            error.message ||
-            'Something went wrong';
+        let message = 'Something went wrong';
+
+        if (error.response?.data) {
+            const data = error.response.data;
+            // Handle { message: "...", ... } or { detail: "...", ... }
+            if (typeof data.message === 'string') message = data.message;
+            else if (typeof data.detail === 'string') message = data.detail;
+            // Handle validation objects { email: ["already exists"], password: ["too short"] }
+            else if (typeof data === 'object') {
+                const firstKey = Object.keys(data)[0];
+                const firstVal = data[firstKey];
+                if (Array.isArray(firstVal)) message = firstVal[0];
+                else if (typeof firstVal === 'string') message = firstVal;
+            }
+        } else {
+            // No response data, handle by status code
+            const status = error.response?.status;
+            switch (status) {
+                case 401:
+                    message = 'Session expired. Please log in again.';
+                    break;
+                case 403:
+                    message = 'You do not have permission to perform this action.';
+                    break;
+                case 404:
+                    message = 'The requested resource was not found.';
+                    break;
+                case 500:
+                    message = 'Server error. Please try again later.';
+                    break;
+                default:
+                    message = error.message || 'Network error';
+            }
+        }
 
         return Promise.reject(new Error(message));
     }

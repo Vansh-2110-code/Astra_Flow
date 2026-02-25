@@ -18,10 +18,11 @@
   --bg-shape-1: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%);
   --bg-shape-2: radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 40%);
 
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.5);
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-  --glass-blur: blur(12px);
+  /* Refined Glass effect - less transparent for better readability */
+  --glass-bg: rgba(255, 255, 255, 0.94);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-shadow: 0 10px 40px -10px rgba(31, 38, 135, 0.15), 0 4px 12px -2px rgba(31, 38, 135, 0.05);
+  --glass-blur: blur(16px);
 
   --text-main: #1f2937;
   --text-muted: #6b7280;
@@ -175,10 +176,12 @@ a:hover {
   top: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
-  background: white;
-  border: 1px solid var(--input-border);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--glass-shadow);
   padding: 0.6rem 0.85rem;
   font-size: 0.75rem;
   font-family: var(--font-body);
@@ -198,4 +201,43 @@ a:hover {
   transform: translateX(-50%);
   border: 5px solid transparent;
   border-bottom-color: var(--input-border);
+}
+
+/* ── Standard Premium Dropdown/Popup Theme ── */
+.dropdown-menu-premium {
+  background: var(--glass-bg) !important;
+  backdrop-filter: var(--glass-blur) !important;
+  -webkit-backdrop-filter: var(--glass-blur) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--glass-shadow) !important;
+  animation: fadeSlideUp 0.15s ease-out !important;
+  z-index: 200 !important;
+}
+
+.dropdown-item-premium {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: var(--font-body);
+  color: var(--text-main);
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.dropdown-item-premium:hover {
+  background: var(--bg-hover) !important;
+}
+
+.dropdown-item-premium.active {
+  background: rgba(99, 102, 241, 0.08) !important;
+  color: var(--color-primary) !important;
+  font-weight: 600;
 }

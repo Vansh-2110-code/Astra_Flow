@@ -38,6 +38,13 @@ export const rejectInvite = (inviteToken) =>
     api.post(`/workspaces/reject/${inviteToken}/`).then((res) => res.data);
 
 /**
+ * Get details for a single workspace.
+ * Endpoint: GET /api/workspaces/workspace/{workspaceId}/
+ */
+export const getWorkspaceDetail = (workspaceId) =>
+    api.get(`/workspaces/workspace/${workspaceId}/`).then((res) => res.data);
+
+/**
  * Get all members of a workspace.
  * Endpoint: GET /api/workspaces/{workspaceId}/members/
  */

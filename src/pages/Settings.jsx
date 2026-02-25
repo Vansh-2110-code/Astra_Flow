@@ -2,17 +2,16 @@ import React, { useState } from 'react';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Building2, Palette, Shield, Plug, Lock, Bell, Key, CreditCard, AlertTriangle, Copy, Check } from 'lucide-react';
+import { Building2, Palette, Shield, Plug, Lock, Bell, AlertTriangle, Copy, Check, User, Camera } from 'lucide-react';
 
 const TABS = [
+    { id: 'profile', label: 'Profile', icon: User },
     { id: 'workspace', label: 'Workspace', icon: Building2 },
     { id: 'branding', label: 'Branding', icon: Palette },
     { id: 'roles', label: 'Roles & Permissions', icon: Shield },
     { id: 'integrations', label: 'Integrations', icon: Plug },
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'apiKeys', label: 'API Keys', icon: Key },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'dangerZone', label: 'Danger Zone', icon: AlertTriangle }
 ];
 
@@ -45,7 +44,16 @@ const defaultMatrix = () => {
 };
 
 const Settings = () => {
-    const [activeTab, setActiveTab] = useState('workspace');
+    const [activeTab, setActiveTab] = useState('profile');
+    const [profile, setProfile] = useState({
+        firstName: 'Alex',
+        lastName: 'Rivera',
+        email: 'alex.rivera@example.com',
+        phone: '+1 (555) 000-0000',
+        dob: '1995-06-15',
+        gender: 'Male',
+        avatar: null
+    });
     const [workspaceName, setWorkspaceName] = useState('Marketing Campaign 2024');
     const [workspaceUrl] = useState('lintcollab.io/marketing-2024');
     const [twoFAEnabled, setTwoFAEnabled] = useState(false);
@@ -119,6 +127,135 @@ const Settings = () => {
                 </nav>
 
                 <div style={{ minWidth: 0 }}>
+                    {activeTab === 'profile' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <Card>
+                                <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Public Profile</h3>
+                                <div style={{ display: 'grid', gap: '2rem' }}>
+                                    {/* Avatar Section */}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                                        <div style={{ position: 'relative' }}>
+                                            <div className="avatar avatar-xl" style={{
+                                                width: 100,
+                                                height: 100,
+                                                borderRadius: '50%',
+                                                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: 'white',
+                                                fontSize: '2rem',
+                                                fontWeight: 600,
+                                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
+                                            }}>
+                                                {profile.firstName[0]}{profile.lastName[0]}
+                                            </div>
+                                            <button style={{
+                                                position: 'absolute',
+                                                bottom: 0,
+                                                right: 0,
+                                                width: 32,
+                                                height: 32,
+                                                borderRadius: '50%',
+                                                background: 'white',
+                                                border: '1px solid var(--input-border)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                cursor: 'pointer',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                            }}>
+                                                <Camera size={16} color="var(--text-muted)" />
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <h4 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Profile Picture</h4>
+                                            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>JPG, GIF or PNG. Max size of 2MB.</p>
+                                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                                <Button variant="outline" style={{ fontSize: '0.85rem' }}>Upload New</Button>
+                                                <Button variant="ghost" style={{ fontSize: '0.85rem', color: '#dc2626' }}>Remove</Button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Form Grid */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                                        <div>
+                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>First name</label>
+                                            <input
+                                                className="input"
+                                                type="text"
+                                                value={profile.firstName}
+                                                onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Last name</label>
+                                            <input
+                                                className="input"
+                                                type="text"
+                                                value={profile.lastName}
+                                                onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Phone number</label>
+                                            <input
+                                                className="input"
+                                                type="tel"
+                                                value={profile.phone}
+                                                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                                                style={{ width: '100%' }}
+                                                placeholder="+1 (555) 000-0000"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Date of Birth</label>
+                                            <input
+                                                className="input"
+                                                type="date"
+                                                value={profile.dob}
+                                                onChange={(e) => setProfile({ ...profile, dob: e.target.value })}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Gender</label>
+                                            <select
+                                                className="themed-select"
+                                                value={profile.gender}
+                                                onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
+                                                style={{ width: '100%' }}
+                                            >
+                                                <option value="Male">Male</option>
+                                                <option value="Female">Female</option>
+                                                <option value="Other">Other</option>
+                                                <option value="Prefer not to say">Prefer not to say</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Email Address</label>
+                                            <input
+                                                className="input"
+                                                type="email"
+                                                value={profile.email}
+                                                readOnly
+                                                style={{ width: '100%', background: 'rgba(0,0,0,0.03)', cursor: 'not-allowed' }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ paddingTop: '1.5rem', borderTop: '1px solid var(--input-border)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                        <Button variant="ghost">Cancel</Button>
+                                        <Button variant="primary">Save Changes</Button>
+                                    </div>
+                                </div>
+                            </Card>
+                        </div>
+                    )}
+
                     {activeTab === 'workspace' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <Card>
@@ -349,61 +486,6 @@ const Settings = () => {
                         </Card>
                     )}
 
-                    {activeTab === 'apiKeys' && (
-                        <Card>
-                            <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>API Keys</h3>
-                            <p className="text-muted" style={{ marginBottom: '1rem' }}>Manage API keys for integrations.</p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                <code style={{
-                                    flex: 1,
-                                    padding: '0.75rem 1rem',
-                                    background: 'rgba(0,0,0,0.04)',
-                                    borderRadius: 'var(--radius-sm)',
-                                    fontSize: '0.9rem',
-                                    fontFamily: 'monospace',
-                                    color: 'var(--text-muted)'
-                                }}>
-                                    {maskedKey}
-                                </code>
-                                <button
-                                    type="button"
-                                    onClick={handleCopyKey}
-                                    style={{
-                                        padding: '0.75rem',
-                                        border: '1px solid var(--input-border)',
-                                        borderRadius: 'var(--radius-sm)',
-                                        background: 'white',
-                                        cursor: 'pointer',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center'
-                                    }}
-                                    title="Copy"
-                                >
-                                    {keyCopied ? <Check size={18} color="#10b981" /> : <Copy size={18} color="var(--text-muted)" />}
-                                </button>
-                            </div>
-                            <Button variant="outline" onClick={() => setMaskedKey('lc_live_••••••••••••••••••••')}>Generate key</Button>
-                        </Card>
-                    )}
-
-                    {activeTab === 'billing' && (
-                        <Card>
-                            <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Billing</h3>
-                            <p className="text-muted" style={{ marginBottom: '1rem' }}>Manage your subscription and payment methods.</p>
-                            <div style={{
-                                padding: '1.5rem',
-                                border: '1px solid var(--input-border)',
-                                borderRadius: 'var(--radius-md)',
-                                marginBottom: '1rem'
-                            }}>
-                                <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.25rem' }}>Pro</div>
-                                <div className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>$29/month</div>
-                                <Button variant="primary">Upgrade</Button>
-                            </div>
-                        </Card>
-                    )}
-
                     {activeTab === 'dangerZone' && (
                         <Card style={{ borderColor: '#fecaca', borderWidth: 2 }}>
                             <h3 className="text-h3" style={{ marginBottom: '0.5rem', color: '#dc2626' }}>Danger Zone</h3>
@@ -426,17 +508,16 @@ const Settings = () => {
                         onClick={() => setDeleteConfirmOpen(false)}
                     />
                     <div
+                        className="dropdown-menu-premium"
                         style={{
                             position: 'fixed',
                             left: '50%',
                             top: '50%',
                             transform: 'translate(-50%, -50%)',
-                            background: 'white',
-                            borderRadius: 'var(--radius-lg)',
                             padding: '1.5rem 2rem',
-                            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+                            minWidth: 360,
                             zIndex: 1001,
-                            minWidth: 360
+                            borderRadius: 'var(--radius-lg)',
                         }}
                     >
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-main)' }}>Delete workspace?</h3>

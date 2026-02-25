@@ -118,19 +118,12 @@ const Topbar = () => {
                             </button>
 
                             {showWsDropdown && (
-                                <div style={{
+                                <div className="dropdown-menu-premium" style={{
                                     position: 'absolute',
                                     top: 'calc(100% + 6px)',
                                     left: 0,
                                     minWidth: '220px',
-                                    background: 'var(--glass-bg)',
-                                    backdropFilter: 'var(--glass-blur)',
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: 'var(--radius-md)',
-                                    boxShadow: 'var(--glass-shadow)',
                                     padding: '0.5rem',
-                                    zIndex: 200,
-                                    animation: 'fadeSlideUp 0.15s ease-out',
                                 }}>
                                     <div style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', padding: '0.25rem 0.5rem 0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                         Workspaces
@@ -144,22 +137,7 @@ const Topbar = () => {
                                                     setShowWsDropdown(false);
                                                     navigate(`/workspace/${ws.id}/content`);
                                                 }}
-                                                style={{
-                                                    width: '100%',
-                                                    display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                                    padding: '0.5rem',
-                                                    border: 'none',
-                                                    borderRadius: 'var(--radius-sm)',
-                                                    background: isActive ? 'rgba(99,102,241,0.08)' : 'transparent',
-                                                    cursor: 'pointer',
-                                                    fontSize: '0.85rem',
-                                                    fontWeight: isActive ? 600 : 400,
-                                                    color: isActive ? 'var(--color-primary)' : 'var(--text-main)',
-                                                    fontFamily: 'var(--font-body)',
-                                                    transition: 'background 0.15s',
-                                                }}
-                                                onMouseOver={(e) => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                                onMouseOut={(e) => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                                                className={`dropdown-item-premium ${isActive ? 'active' : ''}`}
                                             >
                                                 <span style={{
                                                     width: 24, height: 24, borderRadius: 6,
@@ -179,22 +157,8 @@ const Topbar = () => {
                                             setShowWsDropdown(false);
                                             navigate('/workspace');
                                         }}
-                                        style={{
-                                            width: '100%',
-                                            display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                            padding: '0.5rem',
-                                            border: 'none',
-                                            borderRadius: 'var(--radius-sm)',
-                                            background: 'transparent',
-                                            cursor: 'pointer',
-                                            fontSize: '0.8rem',
-                                            fontWeight: 500,
-                                            color: 'var(--text-muted)',
-                                            fontFamily: 'var(--font-body)',
-                                            transition: 'background 0.15s',
-                                        }}
-                                        onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                        onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                        className="dropdown-item-premium"
+                                        style={{ color: 'var(--text-muted)' }}
                                     >
                                         <ArrowLeft size={14} />
                                         All Workspaces
@@ -273,19 +237,12 @@ const Topbar = () => {
                         </button>
 
                         {showUserMenu && (
-                            <div style={{
+                            <div className="dropdown-menu-premium" style={{
                                 position: 'absolute',
                                 top: 'calc(100% + 8px)',
                                 right: 0,
                                 minWidth: '200px',
-                                background: 'var(--glass-bg)',
-                                backdropFilter: 'var(--glass-blur)',
-                                border: '1px solid var(--glass-border)',
-                                borderRadius: 'var(--radius-md)',
-                                boxShadow: 'var(--glass-shadow)',
                                 padding: '0.85rem',
-                                zIndex: 200,
-                                animation: 'fadeSlideUp 0.15s ease-out',
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.65rem' }}>
                                     <div style={{
@@ -310,18 +267,8 @@ const Topbar = () => {
                                 <div style={{ height: 1, background: 'var(--input-border)', margin: '0.25rem 0 0.5rem' }} />
                                 <button
                                     onClick={logout}
-                                    style={{
-                                        width: '100%',
-                                        display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                        padding: '0.45rem 0.5rem',
-                                        border: 'none', borderRadius: 'var(--radius-sm)',
-                                        background: 'transparent', cursor: 'pointer',
-                                        fontSize: '0.8rem', fontWeight: 500,
-                                        color: '#ef4444',
-                                        transition: 'background 0.15s',
-                                    }}
-                                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-                                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                                    className="dropdown-item-premium"
+                                    style={{ color: '#ef4444' }}
                                 >
                                     <LogOut size={15} />
                                     Log Out

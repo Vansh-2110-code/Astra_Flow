@@ -155,28 +155,23 @@ const Sidebar = () => {
             </nav>
 
             {/* User section at bottom with popup */}
-            <div style={{ marginTop: 'auto', padding: '0.75rem 0', position: 'relative' }}>
+            <div
+                style={{ marginTop: 'auto', padding: '0.75rem 0', position: 'relative' }}
+                onMouseEnter={() => setShowUserPopup(true)}
+                onMouseLeave={() => setShowUserPopup(false)}
+            >
                 {/* User popup — appears above the avatar card */}
                 {showUserPopup && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            bottom: '100%',
-                            left: '0.5rem',
-                            right: '0.5rem',
-                            marginBottom: '0.5rem',
-                            background: 'var(--glass-bg)',
-                            backdropFilter: 'var(--glass-blur)',
-                            border: '1px solid var(--glass-border)',
-                            borderRadius: 'var(--radius-md)',
-                            boxShadow: 'var(--glass-shadow)',
-                            padding: '0.85rem',
-                            zIndex: 100,
-                            animation: 'fadeSlideUp 0.15s ease-out',
-                        }}
-                        onMouseEnter={() => setShowUserPopup(true)}
-                        onMouseLeave={() => setShowUserPopup(false)}
-                    >
+                    <div className="dropdown-menu-premium" style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: '0.5rem',
+                        right: '0.5rem',
+                        marginBottom: '0.25rem',
+                        padding: '0.85rem',
+                    }}>
+                        {/* Invisible bridge to prevent mouseleave during transition */}
+                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, height: '0.5rem', background: 'transparent' }} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.65rem' }}>
                             <div style={{
                                 width: 36, height: 36, borderRadius: '50%',
@@ -200,18 +195,8 @@ const Sidebar = () => {
                         <div style={{ height: 1, background: 'var(--input-border)', margin: '0.25rem 0 0.5rem' }} />
                         <button
                             onClick={logout}
-                            style={{
-                                width: '100%',
-                                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                padding: '0.45rem 0.5rem',
-                                border: 'none', borderRadius: 'var(--radius-sm)',
-                                background: 'transparent', cursor: 'pointer',
-                                fontSize: '0.8rem', fontWeight: 500,
-                                color: '#ef4444',
-                                transition: 'background 0.15s',
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-                            onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                            className="dropdown-item-premium"
+                            style={{ color: '#ef4444' }}
                         >
                             <LogOut size={15} />
                             Log Out
@@ -223,8 +208,6 @@ const Sidebar = () => {
                 <div
                     className="nav-item"
                     style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', cursor: 'pointer' }}
-                    onMouseEnter={() => setShowUserPopup(true)}
-                    onMouseLeave={() => setShowUserPopup(false)}
                 >
                     <div className="avatar avatar-sm" style={{
                         background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
