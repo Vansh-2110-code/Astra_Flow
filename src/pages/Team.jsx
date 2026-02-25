@@ -5,8 +5,9 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import InviteMemberModal from '../components/InviteMemberModal';
-import { getWorkspaceMembers } from '../services/workspaceService';
-import { Mail, MoreVertical, Plus, Loader2 } from 'lucide-react';
+import Toast from '../components/ui/Toast';
+import { getWorkspaceMembers, removeMember } from '../services/workspaceService';
+import { Mail, MoreVertical, Plus, Loader2, UserMinus, Trash2 } from 'lucide-react';
 
 const ROLE_DESCRIPTIONS = {
     Admin: 'Full access — create, edit, approve, delete posts, manage members & settings',
@@ -21,6 +22,8 @@ const Team = () => {
     const [error, setError] = useState('');
     const [inviteOpen, setInviteOpen] = useState(false);
     const [hoveredRole, setHoveredRole] = useState(null);
+    const [openMenuId, setOpenMenuId] = useState(null);
+    const [toast, setToast] = useState(null);
 
     // Fetch members from API on mount
     useEffect(() => {
@@ -47,6 +50,26 @@ const Team = () => {
 
     const handleInvite = (member) => {
         setMembers((prev) => [...prev, member]);
+    };
+
+    const handleRemoveMember = async (member) => {
+        const memberId = member.id;
+        const email = getMemberEmail(member);
+
+        if (!window.confirm(`Are you sure you want to remove ${getMemberName(member)} (${email}) from this workspace?`)) {
+            return;
+        }
+
+        try {
+            await removeMember(workspaceId, memberId);
+            setMembers((prev) => prev.filter((m) => m.id !== memberId));
+            setToast({ type: 'success', message: `Member ${email} removed from workspace.` });
+        } catch (err) {
+            console.error('Failed to remove member:', err);
+            setToast({ type: 'error', message: err.message || 'Failed to remove member' });
+        } finally {
+            setOpenMenuId(null);
+        }
     };
 
     // Derive display-friendly name from API member object
@@ -77,13 +100,21 @@ const Team = () => {
                 </Button>
             </div>
 
+            {toast && (
+                <Toast
+                    type={toast.type}
+                    message={toast.message}
+                    onClose={() => setToast(null)}
+                />
+            )}
+
             <InviteMemberModal
                 isOpen={inviteOpen}
                 onClose={() => setInviteOpen(false)}
                 onInvite={handleInvite}
             />
 
-            <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
+            <div className="card" style={{ padding: 0 }}>
                 {loading ? (
                     <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -108,7 +139,7 @@ const Team = () => {
                         No team members yet. Click <strong>Invite Member</strong> to add someone.
                     </div>
                 ) : (
-                    <table className="team-table">
+                    <table className="team-table" style={{ overflow: 'visible' }}>
                         <thead>
                             <tr>
                                 <th>Name</th>
@@ -118,12 +149,13 @@ const Team = () => {
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody style={{ overflow: 'visible' }}>
                             {members.map((member, idx) => {
                                 const name = getMemberName(member);
                                 const email = getMemberEmail(member);
+                                const memberKey = member.id || `idx-${idx}`;
                                 return (
-                                    <tr key={member.id || idx} className="team-row">
+                                    <tr key={memberKey} className="team-row" style={{ overflow: 'visible' }}>
                                         <td>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                                                 <div className="avatar" style={{ background: 'var(--color-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.85rem' }}>
@@ -139,11 +171,11 @@ const Team = () => {
                                         </td>
                                         <td>
                                             <div className="role-tooltip-wrapper"
-                                                onMouseEnter={() => setHoveredRole(member.id || idx)}
+                                                onMouseEnter={() => setHoveredRole(memberKey)}
                                                 onMouseLeave={() => setHoveredRole(null)}
                                                 style={{ display: 'inline-flex' }}
                                             >
-                                                {hoveredRole === (member.id || idx) && ROLE_DESCRIPTIONS[member.role] && (
+                                                {hoveredRole === memberKey && ROLE_DESCRIPTIONS[member.role] && (
                                                     <div className="role-tooltip">
                                                         <strong>{member.role}:</strong> {ROLE_DESCRIPTIONS[member.role]}
                                                     </div>
@@ -156,10 +188,40 @@ const Team = () => {
                                         <td>
                                             <Badge status={member.status || 'Active'} />
                                         </td>
-                                        <td style={{ textAlign: 'right' }}>
-                                            <button type="button" className="btn btn-ghost">
+                                        <td style={{ textAlign: 'right', position: 'relative', overflow: 'visible' }}>
+                                            <button
+                                                type="button"
+                                                className="btn btn-ghost"
+                                                onClick={() => setOpenMenuId(openMenuId === memberKey ? null : memberKey)}
+                                            >
                                                 <MoreVertical size={18} />
                                             </button>
+
+                                            {openMenuId === memberKey && (
+                                                <>
+                                                    <div
+                                                        style={{ position: 'fixed', inset: 0, zIndex: 999 }}
+                                                        onClick={() => setOpenMenuId(null)}
+                                                    />
+                                                    <div className="dropdown-menu-premium" style={{
+                                                        position: 'absolute',
+                                                        top: 'calc(100% + 4px)',
+                                                        right: 0,
+                                                        minWidth: '160px',
+                                                        padding: '0.4rem',
+                                                        zIndex: 1000,
+                                                    }}>
+                                                        <button
+                                                            onClick={() => handleRemoveMember(member)}
+                                                            className="dropdown-item-premium"
+                                                            style={{ color: '#ef4444' }}
+                                                        >
+                                                            <UserMinus size={15} />
+                                                            Remove Member
+                                                        </button>
+                                                    </div>
+                                                </>
+                                            )}
                                         </td>
                                     </tr>
                                 );

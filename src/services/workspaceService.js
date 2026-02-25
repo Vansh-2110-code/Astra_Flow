@@ -50,3 +50,10 @@ export const getWorkspaceDetail = (workspaceId) =>
  */
 export const getWorkspaceMembers = (workspaceId) =>
     api.get(`/workspaces/${workspaceId}/members/`).then((res) => res.data);
+
+/**
+ * Remove a member from a workspace.
+ * Endpoint: DELETE /api/workspaces/{workspaceId}/members/{memberId}/
+ */
+export const removeMember = (workspaceId, memberId) =>
+    api.delete(`/workspaces/${workspaceId}/members/${memberId}/`).then((res) => res.data);
