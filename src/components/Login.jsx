@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Loader, CheckCircle, AlertCircle, Chrome } from 'lucide-react';
-import { login } from '../services/authService';
+import { login, storeAuthData } from '../services/authService';
 import '../styles/login.css';
 
 const Login = () => {
@@ -11,7 +11,9 @@ const Login = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
+    const [rememberMe, setRememberMe] = useState(() => {
+        return localStorage.getItem('rememberMe') === 'true';
+    });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -26,18 +28,18 @@ const Login = () => {
 
             const response = await login(email, password);
             setSuccess(true);
-            // Store tokens
-            localStorage.setItem('access_token', response.access);
-            localStorage.setItem('refresh_token', response.refresh);
-            localStorage.setItem('user', JSON.stringify(response.user));
+            
+            // Store tokens based on rememberMe preference
+            storeAuthData(response, rememberMe);
 
-            // Simulate redirect delay
+            // Redirect after brief delay
             setTimeout(() => {
                 window.location.href = '/workspace';
             }, 1000);
 
         } catch (err) {
-            setError(err.message || 'An error occurred');
+            // Error is already mapped to a friendly message by the api interceptor
+            setError(err.message);
         } finally {
             setLoading(false);
         }

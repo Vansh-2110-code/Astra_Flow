@@ -40,8 +40,8 @@ const InviteMemberModal = ({ isOpen, onClose, onInvite }) => {
             setRole('Editor');
             onClose();
         } catch (err) {
-            console.error('Invite failed:', err);
-            setError(err.message || 'Failed to send invite');
+            // Error is already mapped to a friendly message by the api interceptor
+            setError(err.message);
         } finally {
             setLoading(false);
         }

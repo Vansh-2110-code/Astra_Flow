@@ -6,8 +6,8 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import InviteMemberModal from '../components/InviteMemberModal';
 import Toast from '../components/ui/Toast';
-import { getWorkspaceMembers, removeMember } from '../services/workspaceService';
-import { Mail, MoreVertical, Plus, Loader2, UserMinus, Trash2 } from 'lucide-react';
+import { getWorkspaceMembers, removeMember, updateMemberRole } from '../services/workspaceService';
+import { Mail, MoreVertical, Plus, Loader2, UserMinus, Trash2, UserCog, Shield, Edit, Eye } from 'lucide-react';
 
 const ROLE_DESCRIPTIONS = {
     Admin: 'Full access — create, edit, approve, delete posts, manage members & settings',
@@ -65,8 +65,23 @@ const Team = () => {
             setMembers((prev) => prev.filter((m) => m.id !== memberId));
             setToast({ type: 'success', message: `Member ${email} removed from workspace.` });
         } catch (err) {
-            console.error('Failed to remove member:', err);
-            setToast({ type: 'error', message: err.message || 'Failed to remove member' });
+            // Error is already mapped to a friendly message by the api interceptor
+            setToast({ type: 'error', message: err.message });
+        } finally {
+            setOpenMenuId(null);
+        }
+    };
+
+    const handleChangeRole = async (member, newRole) => {
+        const memberId = member.id;
+        const email = getMemberEmail(member);
+
+        try {
+            await updateMemberRole(workspaceId, memberId, newRole.toLowerCase());
+            setMembers((prev) => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m));
+            setToast({ type: 'success', message: `Role for ${email} updated to ${newRole}.` });
+        } catch (err) {
+            setToast({ type: 'error', message: err.message });
         } finally {
             setOpenMenuId(null);
         }
@@ -211,6 +226,18 @@ const Team = () => {
                                                         padding: '0.4rem',
                                                         zIndex: 1000,
                                                     }}>
+                                                        <div style={{ padding: '0.4rem', borderBottom: '1px solid var(--input-border)', marginBottom: '0.2rem' }}>
+                                                            <div className="text-muted" style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Change Role</div>
+                                                            <button onClick={() => handleChangeRole(member, 'Admin')} className="dropdown-item-premium" style={{ opacity: member.role === 'Admin' ? 0.5 : 1 }}>
+                                                                <Shield size={14} /> Admin
+                                                            </button>
+                                                            <button onClick={() => handleChangeRole(member, 'Editor')} className="dropdown-item-premium" style={{ opacity: member.role === 'Editor' ? 0.5 : 1 }}>
+                                                                <Edit size={14} /> Editor
+                                                            </button>
+                                                            <button onClick={() => handleChangeRole(member, 'Viewer')} className="dropdown-item-premium" style={{ opacity: member.role === 'Viewer' ? 0.5 : 1 }}>
+                                                                <Eye size={14} /> Viewer
+                                                            </button>
+                                                        </div>
                                                         <button
                                                             onClick={() => handleRemoveMember(member)}
                                                             className="dropdown-item-premium"

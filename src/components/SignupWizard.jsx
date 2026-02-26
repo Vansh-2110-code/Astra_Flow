@@ -344,6 +344,7 @@ const SignupWizard = () => {
         try {
             const result = await registerUser(payload);
 
+            // In case the backend returns status: false even with 200 OK
             if (result && result.status === false) {
                 const msg = result.message || 'Registration failed';
                 setError(msg);
@@ -355,7 +356,8 @@ const SignupWizard = () => {
             setStep(3);
             setTimeout(() => navigate('/login'), 2000);
         } catch (err) {
-            const msg = err.message || 'Registration failed';
+            // Error is already mapped to a friendly message by the api interceptor
+            const msg = err.message;
             setError(msg);
             showToast('error', msg);
         } finally {

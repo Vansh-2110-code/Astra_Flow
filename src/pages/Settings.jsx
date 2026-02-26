@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Building2, Palette, Shield, Plug, Lock, Bell, AlertTriangle, Copy, Check, User, Camera } from 'lucide-react';
+import { Building2, Palette, Shield, Plug, Lock, Bell, AlertTriangle, Copy, Check, User, Camera, Loader2, Globe, Facebook } from 'lucide-react';
+import { updateWorkspace, getWorkspaceDetail, deleteWorkspace } from '../services/workspaceService';
+import { initiateFacebookLogin } from '../services/channelService';
 
 const TABS = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -19,11 +22,21 @@ const ROLES = ['Admin', 'Editor', 'Viewer'];
 const PERMISSIONS = ['Create Post', 'Edit Post', 'Approve', 'Publish', 'Schedule', 'Delete', 'Manage Team'];
 
 const INTEGRATION_APPS = [
+    { id: 'facebook', name: 'Facebook' },
     { id: 'canva', name: 'Canva' },
     { id: 'slack', name: 'Slack' },
     { id: 'gdrive', name: 'Google Drive' },
     { id: 'figma', name: 'Figma' },
     { id: 'notion', name: 'Notion' }
+];
+
+const TIMEZONES = [
+    { value: 'Asia/Kolkata', label: '(GMT+05:30) India Standard Time - Kolkata' },
+    { value: 'UTC', label: '(GMT+00:00) Central Standard Time - UTC' },
+    { value: 'America/New_York', label: '(GMT-05:00) Eastern Standard Time - New York' },
+    { value: 'Europe/London', label: '(GMT+00:00) Western European Time - London' },
+    { value: 'Asia/Dubai', label: '(GMT+04:00) Gulf Standard Time - Dubai' },
+    { value: 'Australia/Sydney', label: '(GMT+11:00) Australian Eastern Daylight Time - Sydney' }
 ];
 
 const defaultMatrix = () => {
@@ -44,6 +57,9 @@ const defaultMatrix = () => {
 };
 
 const Settings = () => {
+    const { workspaceId } = useParams();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = useState('profile');
     const [profile, setProfile] = useState({
         firstName: 'Alex',
@@ -54,27 +70,189 @@ const Settings = () => {
         gender: 'Male',
         avatar: null
     });
-    const [workspaceName, setWorkspaceName] = useState('Marketing Campaign 2024');
-    const [workspaceUrl] = useState('lintcollab.io/marketing-2024');
+    const [workspaceName, setWorkspaceName] = useState('Loading...');
+    const [timezone, setTimezone] = useState('UTC');
     const [twoFAEnabled, setTwoFAEnabled] = useState(false);
     const [permMatrix, setPermMatrix] = useState(defaultMatrix);
-    const [integrations, setIntegrations] = useState({ canva: true, slack: false, gdrive: true, figma: false, notion: false });
+    
+    // Initialize integrations from localStorage
+    const [integrations, setIntegrations] = useState(() => {
+        try {
+            const stored = localStorage.getItem(`workspace_${workspaceId}_integrations`);
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (err) {
+            console.error('Failed to load integrations from localStorage:', err);
+        }
+        // Default state if nothing stored
+        return {
+            facebook: false,
+            canva: true,
+            slack: false,
+            gdrive: true,
+            figma: false,
+            notion: false
+        };
+    });
+    
     const [maskedKey, setMaskedKey] = useState('lc_live_••••••••••••••••••••');
     const [keyCopied, setKeyCopied] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [toast, setToast] = useState(null);
+    
+    // Save integrations to localStorage whenever they change
+    useEffect(() => {
+        if (workspaceId) {
+            localStorage.setItem(`workspace_${workspaceId}_integrations`, JSON.stringify(integrations));
+        }
+    }, [integrations, workspaceId]);
 
     const togglePerm = (role, perm) => {
         const key = `${role}-${perm}`;
         setPermMatrix(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
-    const toggleIntegration = (id) => {
+    const toggleIntegration = async (id) => {
+        if (id === 'facebook') {
+            if (!integrations.facebook) {
+                // Connect Facebook
+                try {
+                    // Use the channelService to initiate Facebook OAuth
+                    await initiateFacebookLogin(workspaceId);
+                    // The function will handle the redirect, so no further action needed
+                } catch (error) {
+                    console.error('Failed to initiate Facebook login:', error);
+                    setToast({ 
+                        type: 'error', 
+                        message: 'Failed to connect Facebook. Please try again.' 
+                    });
+                    setTimeout(() => setToast(null), 4000);
+                }
+            } else {
+                // Disconnect Facebook
+                setIntegrations(prev => ({ ...prev, facebook: false }));
+                setToast({ 
+                    type: 'success', 
+                    message: 'Facebook disconnected successfully.' 
+                });
+                setTimeout(() => setToast(null), 3000);
+                // TODO: Call backend API to disconnect Facebook when available
+                // await disconnectChannel(facebookChannelId);
+            }
+            return;
+        }
         setIntegrations(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
     const handleCopyKey = () => {
         setKeyCopied(true);
         setTimeout(() => setKeyCopied(false), 2000);
+    };
+
+    // Load workspace details on mount
+    useEffect(() => {
+        const fetchDetails = async () => {
+            if (!workspaceId) return;
+            try {
+                const data = await getWorkspaceDetail(workspaceId);
+                setWorkspaceName(data.name || '');
+                setTimezone(data.timezone || 'Asia/Kolkata');
+            } catch (err) {
+                console.error('Failed to fetch workspace details:', err);
+                setToast({ type: 'error', message: 'Failed to load workspace settings' });
+                setTimeout(() => setToast(null), 3000);
+            }
+        };
+        fetchDetails();
+    }, [workspaceId]);
+
+    // Handle Facebook OAuth redirect callbacks
+    useEffect(() => {
+        const facebookStatus = searchParams.get('facebook');
+        
+        if (facebookStatus) {
+            // Set active tab to integrations
+            setActiveTab('integrations');
+            
+            // Handle different Facebook OAuth responses
+            switch (facebookStatus) {
+                case 'success':
+                    setIntegrations(prev => ({ ...prev, facebook: true }));
+                    setToast({ 
+                        type: 'success', 
+                        message: 'Facebook connected successfully!' 
+                    });
+                    break;
+                    
+                case 'error':
+                    setToast({ 
+                        type: 'error', 
+                        message: 'Failed to connect Facebook. Please try again.' 
+                    });
+                    break;
+                    
+                case 'invalid_workspace':
+                    setToast({ 
+                        type: 'error', 
+                        message: 'Invalid workspace. Please check your workspace ID.' 
+                    });
+                    break;
+                    
+                case 'token_failed':
+                    setToast({ 
+                        type: 'error', 
+                        message: 'Failed to obtain Facebook token. Please try again.' 
+                    });
+                    break;
+                    
+                default:
+                    setToast({ 
+                        type: 'error', 
+                        message: 'An unexpected error occurred.' 
+                    });
+            }
+            
+            // Clear toast after 4 seconds
+            setTimeout(() => setToast(null), 4000);
+            
+            // Clean up URL parameters and Facebook hash
+            const cleanUrl = window.location.pathname;
+            window.history.replaceState({}, '', cleanUrl);
+        }
+    }, [searchParams]);
+
+    const handleUpdateWorkspace = async () => {
+        setLoading(true);
+        try {
+            await updateWorkspace(workspaceId, {
+                name: workspaceName,
+                timezone: timezone
+            });
+            setToast({ type: 'success', message: 'Workspace updated successfully' });
+        } catch (err) {
+            setToast({ type: 'error', message: err.message });
+        } finally {
+            setLoading(false);
+            setTimeout(() => setToast(null), 3000);
+        }
+    };
+
+    const handleDeleteWorkspace = async () => {
+        setLoading(true);
+        try {
+            await deleteWorkspace(workspaceId);
+            setToast({ type: 'success', message: 'Workspace deleted successfully' });
+            setTimeout(() => {
+                navigate('/workspace');
+            }, 1500);
+        } catch (err) {
+            setToast({ type: 'error', message: err.message });
+            setLoading(false);
+        } finally {
+            setDeleteConfirmOpen(false);
+        }
     };
 
     const navStyle = (id) => ({
@@ -272,8 +450,20 @@ const Settings = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-main)' }}>Workspace URL</label>
-                                        <input className="input" type="text" value={workspaceUrl} readOnly style={{ width: '100%', background: 'rgba(0,0,0,0.03)' }} />
+                                        <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-main)' }}>Timezone</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <select
+                                                className="input"
+                                                value={timezone}
+                                                onChange={(e) => setTimezone(e.target.value)}
+                                                style={{ width: '100%', paddingRight: '2.5rem', appearance: 'none' }}
+                                            >
+                                                {TIMEZONES.map(tz => (
+                                                    <option key={tz.value} value={tz.value}>{tz.label}</option>
+                                                ))}
+                                            </select>
+                                            <Globe size={16} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.5, pointerEvents: 'none' }} />
+                                        </div>
                                     </div>
                                     <div>
                                         <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Logo</label>
@@ -283,7 +473,13 @@ const Settings = () => {
                                         </div>
                                     </div>
                                     <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--input-border)', display: 'flex', justifyContent: 'flex-end' }}>
-                                        <Button variant="primary">Save changes</Button>
+                                        <Button
+                                            variant="primary"
+                                            onClick={handleUpdateWorkspace}
+                                            disabled={loading}
+                                        >
+                                            {loading ? <Loader2 className="animate-spin" size={18} /> : 'Save changes'}
+                                        </Button>
                                     </div>
                                 </div>
                             </Card>
@@ -386,6 +582,8 @@ const Settings = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
                                 {INTEGRATION_APPS.map(app => {
                                     const connected = integrations[app.id];
+                                    const AppIcon = app.id === 'facebook' ? Facebook : Plug;
+                                    
                                     return (
                                         <Card
                                             key={app.id}
@@ -402,7 +600,10 @@ const Settings = () => {
                                                 e.currentTarget.style.boxShadow = '';
                                             }}
                                         >
-                                            <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>{app.name}</div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                                <AppIcon size={20} color={app.id === 'facebook' ? '#1877f2' : 'var(--text-muted)'} />
+                                                <div style={{ fontWeight: 600 }}>{app.name}</div>
+                                            </div>
                                             <span style={{
                                                 display: 'inline-block',
                                                 fontSize: '0.75rem',
@@ -497,38 +698,70 @@ const Settings = () => {
             </div>
 
             {deleteConfirmOpen && (
-                <>
-                    <div
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            background: 'rgba(0,0,0,0.5)',
-                            zIndex: 1000
-                        }}
-                        onClick={() => setDeleteConfirmOpen(false)}
-                    />
+                <div
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.5)',
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 1100,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                    onClick={() => setDeleteConfirmOpen(false)}
+                >
                     <div
                         className="dropdown-menu-premium"
                         style={{
-                            position: 'fixed',
-                            left: '50%',
-                            top: '50%',
-                            transform: 'translate(-50%, -50%)',
                             padding: '1.5rem 2rem',
                             minWidth: 360,
-                            zIndex: 1001,
+                            zIndex: '1101 !important',
                             borderRadius: 'var(--radius-lg)',
+                            background: 'white',
+                            position: 'relative'
                         }}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--text-main)' }}>Delete workspace?</h3>
                         <p className="text-muted" style={{ marginBottom: '1.5rem', fontSize: '0.9rem' }}>This action cannot be undone. All data will be permanently removed.</p>
                         <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                            <Button variant="ghost" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-                            <Button variant="danger" onClick={() => setDeleteConfirmOpen(false)}>Delete</Button>
+                            <Button variant="ghost" onClick={() => setDeleteConfirmOpen(false)} disabled={loading}>Cancel</Button>
+                            <Button variant="danger" onClick={handleDeleteWorkspace} disabled={loading}>
+                                {loading ? <Loader2 className="animate-spin" size={18} /> : 'Delete'}
+                            </Button>
                         </div>
                     </div>
-                </>
+                </div>
             )}
+
+            {/* Toast Notification */}
+            {toast && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '2rem',
+                    right: '2rem',
+                    padding: '1rem 1.5rem',
+                    background: toast.type === 'success' ? '#10b981' : '#ef4444',
+                    color: 'white',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                    zIndex: 2000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    animation: 'slideIn 0.3s ease-out'
+                }}>
+                    {toast.type === 'success' ? <Check size={20} /> : <AlertTriangle size={20} />}
+                    <span style={{ fontWeight: 500 }}>{toast.message}</span>
+                </div>
+            )}
+            <style>{`
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `}</style>
         </DashboardLayout>
     );
 };

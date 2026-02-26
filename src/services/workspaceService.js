@@ -57,3 +57,25 @@ export const getWorkspaceMembers = (workspaceId) =>
  */
 export const removeMember = (workspaceId, memberId) =>
     api.delete(`/workspaces/${workspaceId}/members/${memberId}/`).then((res) => res.data);
+
+/**
+ * Update workspace details (name, timezone).
+ * Endpoint: PATCH /api/workspaces/workspace/{workspaceId}/
+ */
+export const updateWorkspace = (workspaceId, data) =>
+    api.patch(`/workspaces/workspace/${workspaceId}/`, data).then((res) => res.data);
+
+/**
+ * Update member role in a workspace.
+ * Endpoint: PATCH /api/workspaces/{workspaceId}/members/{memberId}/
+ */
+export const updateMemberRole = (workspaceId, memberId, role) =>
+    api.patch(`/workspaces/${workspaceId}/members/${memberId}/`, { role }).then((res) => res.data);
+
+/**
+ * Delete a workspace.
+ * Endpoint: DELETE /api/workspaces/workspace/{workspaceId}/
+ */
+export const deleteWorkspace = (workspaceId) =>
+    api.delete(`/workspaces/workspace/${workspaceId}/`).then((res) => res.data);
+

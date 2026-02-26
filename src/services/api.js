@@ -3,6 +3,7 @@
 
 import axios from 'axios';
 import { logout } from './authService';
+import { mapError } from './errorMapper';
 
 const api = axios.create({
     baseURL: `${(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')}/api`,
@@ -15,7 +16,8 @@ const api = axios.create({
 // ── Request Interceptor: auto-attach Bearer token ──
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('access_token');
+        const token = localStorage.getItem('access_token') || 
+                      sessionStorage.getItem('access_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -65,7 +67,8 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const refreshToken = localStorage.getItem('refresh_token');
+                const refreshToken = localStorage.getItem('refresh_token') || 
+                                      sessionStorage.getItem('refresh_token');
                 if (!refreshToken) {
                     throw new Error('No refresh token available');
                 }
@@ -78,11 +81,15 @@ api.interceptors.response.use(
                 );
 
                 const newAccessToken = data.access;
-                localStorage.setItem('access_token', newAccessToken);
+                
+                // Store in the same storage type as the refresh token
+                const storage = localStorage.getItem('refresh_token') ? 
+                                localStorage : sessionStorage;
+                storage.setItem('access_token', newAccessToken);
 
                 // If backend also rotates the refresh token
                 if (data.refresh) {
-                    localStorage.setItem('refresh_token', data.refresh);
+                    storage.setItem('refresh_token', data.refresh);
                 }
 
                 processQueue(null, newAccessToken);
@@ -100,42 +107,8 @@ api.interceptors.response.use(
             }
         }
 
-        // For all other errors, parse the backend message
-        let message = 'Something went wrong';
-
-        if (error.response?.data) {
-            const data = error.response.data;
-            // Handle { message: "...", ... } or { detail: "...", ... }
-            if (typeof data.message === 'string') message = data.message;
-            else if (typeof data.detail === 'string') message = data.detail;
-            // Handle validation objects { email: ["already exists"], password: ["too short"] }
-            else if (typeof data === 'object') {
-                const firstKey = Object.keys(data)[0];
-                const firstVal = data[firstKey];
-                if (Array.isArray(firstVal)) message = firstVal[0];
-                else if (typeof firstVal === 'string') message = firstVal;
-            }
-        } else {
-            // No response data, handle by status code
-            const status = error.response?.status;
-            switch (status) {
-                case 401:
-                    message = 'Session expired. Please log in again.';
-                    break;
-                case 403:
-                    message = 'You do not have permission to perform this action.';
-                    break;
-                case 404:
-                    message = 'The requested resource was not found.';
-                    break;
-                case 500:
-                    message = 'Server error. Please try again later.';
-                    break;
-                default:
-                    message = error.message || 'Network error';
-            }
-        }
-
+        // For all other errors, use mapError to get a user-friendly message
+        const message = mapError(error);
         return Promise.reject(new Error(message));
     }
 );
