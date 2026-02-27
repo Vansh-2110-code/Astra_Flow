@@ -6,10 +6,21 @@ import Button from './ui/Button';
 import { X, Loader2 } from 'lucide-react';
 import { inviteToWorkspace } from '../services/workspaceService';
 
+// Role tooltip added (UI only) — detailed permission descriptions
 const ROLE_DESCRIPTIONS = {
-    Admin: 'Full access — create, edit, approve, delete posts, manage members & settings',
-    Editor: 'Can create, edit & schedule posts',
-    Viewer: 'Read-only — can view posts',
+    Admin: [
+        'Full workspace control',
+        'Manage members',
+        'Manage content'
+    ],
+    Editor: [
+        'Create and edit posts',
+        'Cannot manage workspace members'
+    ],
+    Viewer: [
+        'View content only',
+        'No editing permissions'
+    ],
 };
 
 const ROLES = ['Admin', 'Editor', 'Viewer'];
@@ -108,6 +119,7 @@ const InviteMemberModal = ({ isOpen, onClose, onInvite }) => {
                         <label className="text-sm" style={{ display: 'block', marginBottom: '0.35rem', fontWeight: 500, color: 'var(--text-main)' }}>
                             Role
                         </label>
+                        {/* Role tooltip added (UI only) */}
                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                             {ROLES.map((r) => {
                                 const active = role === r;
@@ -117,8 +129,16 @@ const InviteMemberModal = ({ isOpen, onClose, onInvite }) => {
                                         onMouseLeave={() => setHoveredRole(null)}
                                     >
                                         {hoveredRole === r && (
-                                            <div className="role-tooltip">
-                                                <strong>{r}:</strong> {ROLE_DESCRIPTIONS[r]}
+                                            <div className="role-tooltip" style={{ whiteSpace: 'normal', minWidth: 180, textAlign: 'left' }}>
+                                                <strong style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.78rem' }}>{r}</strong>
+                                                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                                    {ROLE_DESCRIPTIONS[r].map((desc, i) => (
+                                                        <li key={i} style={{ fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.1rem 0', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                                                            <span style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--color-primary)', flexShrink: 0 }} />
+                                                            {desc}
+                                                        </li>
+                                                    ))}
+                                                </ul>
                                             </div>
                                         )}
                                         <button

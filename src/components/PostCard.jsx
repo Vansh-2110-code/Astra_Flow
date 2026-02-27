@@ -14,15 +14,13 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
 
     // Text Selection State
     const contentRef = useRef(null);
-    const [selectionState, setSelectionState] = useState(null); // { start, end, text, rect }
+    const [selectionState, setSelectionState] = useState(null);
     const [commentText, setCommentText] = useState('');
     const [visibility, setVisibility] = useState('team');
     const [showCommentInput, setShowCommentInput] = useState(false);
 
-    // Close comment input and selection trigger when clicking outside
     useEffect(() => {
         const handleClickOutside = (e) => {
-            // Check if clicking outside both the trigger button and the popover
             const isClickingOutside = !e.target.closest('.comment-popover') &&
                 !e.target.closest('.comment-trigger') &&
                 !e.target.closest('[data-post-content]');
@@ -41,9 +39,6 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
     const handleApprove = (e) => {
         e.stopPropagation();
         if (canApprove && onApprove) {
-            // Toggle approval for current user
-            // If hasUserApproved is true, we want to disapprove (pass false)
-            // If hasUserApproved is false, we want to approve (pass true)
             onApprove(post.id, !hasUserApproved);
         }
     };
@@ -58,7 +53,6 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
         const text = selection.toString();
         if (!text.trim()) return;
 
-        // Calculate offset relative to the content container
         const preSelectionRange = range.cloneRange();
         preSelectionRange.selectNodeContents(contentRef.current);
         preSelectionRange.setEnd(range.startContainer, range.startOffset);
@@ -102,11 +96,9 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
             onAddComment(post.id, newComment);
         }
 
-        // Keep selection state briefly to maintain highlight
         setShowCommentInput(false);
         setCommentText('');
 
-        // Clear selection after a brief delay to allow state update
         setTimeout(() => {
             window.getSelection().removeAllRanges();
         }, 100);
@@ -124,16 +116,14 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
         let lastIndex = 0;
 
         commentsWithSelection.forEach((comment, idx) => {
-            if (comment.selection.start < lastIndex) return; // Skip overlaps
+            if (comment.selection.start < lastIndex) return;
 
-            // Text before highlight
             if (comment.selection.start > lastIndex) {
                 parts.push(
                     <span key={`text-${idx}`}>{post.content.substring(lastIndex, comment.selection.start)}</span>
                 );
             }
 
-            // Highlighted text
             parts.push(
                 <span
                     key={`highlight-${idx}`}
@@ -166,6 +156,7 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
 
     return (
         <div style={{ position: 'relative', paddingLeft: '20px' }}>
+            {/* Approval dot */}
             <div
                 onClick={handleApprove}
                 onMouseEnter={() => setShowApproverPopup(true)}
@@ -193,6 +184,7 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
                 {hasUserApproved && <CheckCircle size={14} color="white" fill="white" />}
             </div>
 
+            {/* Approver popup */}
             {showApproverPopup && (
                 <div
                     style={{
@@ -226,30 +218,79 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
                 </div>
             )}
 
-            <Card className="post-card">
-                <div className="post-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ padding: 7, background: '#f3f4f6', borderRadius: '50%', color: '#374151' }}>
-                            {Icon && <Icon size={16} />}
+            {/* Post Card */}
+            <Card
+                className="post-card"
+                style={{
+                    borderRadius: 10,
+                    padding: '0.875rem 1rem',
+                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)'
+                }}
+            >
+                {/* Post header: platform • date | "Say something..." | ⋯ */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ width: 28, height: 28, background: '#f3f4f6', borderRadius: '50%', color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {Icon && <Icon size={15} />}
                         </div>
                         <div>
-                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{post.platform}</div>
-                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>{post.date} • by {post.author}</div>
+                            <span style={{ fontWeight: 600, fontSize: '0.82rem' }}>{post.platform}</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: '0 0.3rem' }}>•</span>
+                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>{post.date}</span>
                         </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <Badge status={post.status} />
-                        <button className="btn-ghost">
-                            <MoreHorizontal size={18} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {/* Plannable-style inline comment — "Say something..." */}
+                        <div
+                            onClick={() => onOpenComments && onOpenComments(post)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                                padding: '4px 12px',
+                                borderRadius: '20px',
+                                border: '1px solid var(--input-border)',
+                                background: '#fafafa',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem',
+                                color: 'var(--text-muted)',
+                                transition: 'border-color 0.15s',
+                                minWidth: 120
+                            }}
+                        >
+                            <div style={{
+                                width: 18, height: 18, borderRadius: '50%',
+                                background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'white', fontSize: '0.5rem', fontWeight: 600, flexShrink: 0
+                            }}>
+                                {(post.author || 'U').charAt(0).toUpperCase()}
+                            </div>
+                            Say something...
+                        </div>
+                        <button className="btn-ghost" style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                            <MoreHorizontal size={16} />
                         </button>
                     </div>
                 </div>
 
+                {/* Platform icon badge */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                    <div style={{
+                        width: 24, height: 24, borderRadius: '50%', background: '#f3f4f6',
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#374151'
+                    }}>
+                        {Icon && <Icon size={13} />}
+                    </div>
+                </div>
+
+                {/* Post content with text selection */}
                 <div
                     ref={contentRef}
                     data-post-content
                     onMouseUp={handleTextSelection}
-                    style={{ marginBottom: '0.875rem', whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '0.9rem', position: 'relative' }}
+                    style={{ marginBottom: '0.75rem', whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '0.88rem', position: 'relative' }}
                 >
                     {renderContent()}
 
@@ -338,40 +379,12 @@ const PostCard = ({ post, onApprove, onOpenComments, onAddComment, currentUser =
                     )}
                 </div>
 
+                {/* Post media */}
                 {post.media && (
                     <div className="post-media">
                         <img src={post.media} alt="Post media" />
                     </div>
                 )}
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', paddingTop: '0.875rem', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-                    <Button variant="ghost" style={{ fontSize: '0.875rem', gap: '0.5rem', padding: '5px 10px' }}>
-                        <Heart size={16} /> Like
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        style={{ fontSize: '0.875rem', gap: '0.5rem', padding: '5px 10px' }}
-                        onClick={() => onOpenComments && onOpenComments(post)}
-                    >
-                        <MessageSquare size={16} /> Comment
-                        {post.comments?.length > 0 && (
-                            <span style={{
-                                background: 'var(--color-primary)',
-                                color: 'white',
-                                borderRadius: '50%',
-                                width: '18px',
-                                height: '18px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '0.7rem',
-                                fontWeight: 600
-                            }}>
-                                {post.comments.length}
-                            </span>
-                        )}
-                    </Button>
-                </div>
             </Card>
         </div>
     );

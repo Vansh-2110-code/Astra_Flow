@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useParams, useNavigate } from 'react-router-dom';
 import {
     FileText,
     CheckSquare,
@@ -25,6 +25,7 @@ import { logout, getUserData } from '../../services/authService';
 
 const Sidebar = () => {
     const { workspaceId } = useParams();
+    const navigate = useNavigate();
     const baseUrl = `/workspace/${workspaceId}`;
     // Connected Apps: one dropdown; when open, scrollable list of apps (no Dashboard in nav).
     const [connectedAppsOpen, setConnectedAppsOpen] = useState(false);
@@ -75,6 +76,23 @@ const Sidebar = () => {
         });
     };
 
+    // UI redesign inspired by Plannable
+    // Layout restructuring (non-breaking)
+    const handleConnectedAccountClick = (appId, handle) => {
+        toggleAccountSelection(appId, handle);
+
+        if (!workspaceId) return;
+
+        let view = 'feed';
+        let platform = appId;
+
+        if (appId === 'LinkedIn') {
+            view = 'list';
+        }
+
+        navigate(`/workspace/${workspaceId}/content?platform=${encodeURIComponent(platform)}&view=${encodeURIComponent(view)}`);
+    };
+
     return (
         <aside className="sidebar">
             <div className="sidebar-header">
@@ -90,9 +108,10 @@ const Sidebar = () => {
                         key={item.path}
                         to={item.path}
                         className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                        // Sidebar alignment improvement — consistent icon sizing
                         style={{ fontSize: '0.8rem' }}
                     >
-                        <item.icon size={18} />
+                        <item.icon size={16} />
                         <span style={{ fontSize: '0.8rem' }}>{item.label}</span>
                     </NavLink>
                 ))}
@@ -136,7 +155,10 @@ const Sidebar = () => {
                                                             type="button"
                                                             className="nav-item"
                                                             style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none', background: 'transparent', font: 'inherit', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.5rem', marginBottom: '0.15rem', borderRadius: 'var(--radius-sm)', fontSize: '0.7rem', color: 'var(--text-muted)', minHeight: 'auto' }}
-                                                            onClick={(e) => { e.stopPropagation(); toggleAccountSelection(app.id, acc.handle); }}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleConnectedAccountClick(app.id, acc.handle);
+                                                            }}
                                                         >
                                                             <Icon size={12} />
                                                             <span style={{ flex: 1, fontSize: '0.7rem' }}>{acc.handle}</span>

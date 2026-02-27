@@ -7,7 +7,10 @@ import { useNotifications } from '../../contexts/NotificationContext';
 import { logout, getUserData } from '../../services/authService';
 import { getWorkspaces } from '../../services/workspaceService';
 
-const Topbar = () => {
+// Compact header redesign — Plannable-style topbar
+// Left: workspace picker + page-injected breadcrumb/actions
+// Right: search, notifications, user avatar
+const Topbar = ({ children }) => {
     const { workspaceId } = useParams();
     const navigate = useNavigate();
     const { getUnreadCount } = useNotifications();
@@ -70,31 +73,21 @@ const Topbar = () => {
     return (
         <>
             <header className="topbar">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <span style={{
-                        fontWeight: 700,
-                        fontSize: '1.1rem',
-                        color: 'var(--color-primary)',
-                        fontFamily: 'var(--font-heading)',
-                        letterSpacing: '-0.02em'
-                    }}>
-                        LintCollab
-                    </span>
-
+                {/* Left section: workspace picker + page-injected content (breadcrumb, view switcher, etc.) */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
                     {/* Workspace switcher — only on workspace pages */}
                     {workspaceId && (
-                        <div ref={wsDropdownRef} style={{ position: 'relative' }}>
+                        <div ref={wsDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
                             <button
                                 onClick={() => setShowWsDropdown(!showWsDropdown)}
                                 style={{
-                                    display: 'flex', alignItems: 'center', gap: '0.4rem',
-                                    padding: '0.35rem 0.65rem',
+                                    display: 'flex', alignItems: 'center', gap: '0.35rem',
+                                    padding: '0.3rem 0.55rem',
                                     border: '1px solid var(--input-border)',
                                     borderRadius: 'var(--radius-sm)',
-                                    background: showWsDropdown ? 'rgba(255,255,255,0.9)' : 'var(--glass-bg)',
-                                    backdropFilter: 'var(--glass-blur)',
+                                    background: showWsDropdown ? 'rgba(255,255,255,0.9)' : 'transparent',
                                     cursor: 'pointer',
-                                    fontSize: '0.85rem',
+                                    fontSize: '0.82rem',
                                     fontWeight: 600,
                                     color: 'var(--text-main)',
                                     fontFamily: 'var(--font-body)',
@@ -102,15 +95,15 @@ const Topbar = () => {
                                 }}
                             >
                                 <span style={{
-                                    width: 22, height: 22, borderRadius: 6,
+                                    width: 20, height: 20, borderRadius: 5,
                                     background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
                                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                                    color: 'white', fontSize: '0.65rem', fontWeight: 700, flexShrink: 0,
+                                    color: 'white', fontSize: '0.6rem', fontWeight: 700, flexShrink: 0,
                                 }}>
                                     {currentWs ? currentWs.name.charAt(0) : '?'}
                                 </span>
                                 {currentWs ? currentWs.name : 'Workspace'}
-                                <ChevronDown size={14} style={{
+                                <ChevronDown size={12} style={{
                                     color: 'var(--text-muted)',
                                     transition: 'transform 0.15s',
                                     transform: showWsDropdown ? 'rotate(180deg)' : 'rotate(0)',
@@ -167,21 +160,34 @@ const Topbar = () => {
                             )}
                         </div>
                     )}
+
+                    {/* Breadcrumb separator after workspace picker */}
+                    {workspaceId && children && (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0.15rem' }}>/</span>
+                    )}
+
+                    {/* Page-injected content: breadcrumb continuation, view switcher, spacer, actions */}
+                    {children && (
+                        <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, gap: '0.5rem' }}>
+                            {children}
+                        </div>
+                    )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+                {/* Right section: search, notifications, user avatar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
                     <div style={{ position: 'relative' }}>
-                        <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                        <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
                             type="text"
                             placeholder="Search..."
                             style={{
-                                padding: '7px 10px 7px 34px',
+                                padding: '5px 8px 5px 28px',
                                 borderRadius: '20px',
                                 border: '1px solid var(--input-border)',
                                 background: 'rgba(255,255,255,0.5)',
-                                fontSize: '0.875rem',
-                                width: '220px',
+                                fontSize: '0.8rem',
+                                width: '140px',
                                 outline: 'none'
                             }}
                         />
@@ -191,26 +197,26 @@ const Topbar = () => {
                         onClick={() => setIsNotificationPanelOpen(true)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', position: 'relative' }}
                     >
-                        <Bell size={18} />
+                        <Bell size={16} />
                         {unreadCount > 0 && (
                             <>
-                                <span style={{ position: 'absolute', top: -2, right: -2, width: 7, height: 7, background: 'var(--color-secondary)', borderRadius: '50%' }}></span>
+                                <span style={{ position: 'absolute', top: -2, right: -2, width: 6, height: 6, background: 'var(--color-secondary)', borderRadius: '50%' }}></span>
                                 {unreadCount > 9 && (
                                     <span style={{
                                         position: 'absolute',
                                         top: -8,
                                         right: -8,
-                                        minWidth: '18px',
-                                        height: '18px',
+                                        minWidth: '16px',
+                                        height: '16px',
                                         background: 'var(--color-secondary)',
                                         color: 'white',
                                         borderRadius: '50%',
-                                        fontSize: '0.65rem',
+                                        fontSize: '0.6rem',
                                         fontWeight: 600,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        padding: '0 4px'
+                                        padding: '0 3px'
                                     }}>
                                         {unreadCount > 99 ? '99+' : unreadCount}
                                     </span>
@@ -224,10 +230,10 @@ const Topbar = () => {
                         <button
                             onClick={() => setShowUserMenu(!showUserMenu)}
                             style={{
-                                width: 32, height: 32, borderRadius: '50%',
+                                width: 28, height: 28, borderRadius: '50%',
                                 background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: 'white', fontSize: '0.7rem', fontWeight: 600,
+                                color: 'white', fontSize: '0.65rem', fontWeight: 600,
                                 border: 'none', cursor: 'pointer',
                                 transition: 'box-shadow 0.15s',
                                 boxShadow: showUserMenu ? '0 0 0 2px var(--color-primary)' : 'none',

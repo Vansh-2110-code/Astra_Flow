@@ -1,103 +1,56 @@
-import React, { useState } from 'react';
-import { LayoutList, Calendar, Grid, List, ChevronDown } from 'lucide-react';
+import React from 'react';
+import { LayoutList, Calendar, Grid, List } from 'lucide-react';
 
 const ViewSwitcher = ({ currentView, onViewChange }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
+    // UI redesign inspired by Plannable
+    // Layout restructuring (non-breaking)
     const views = [
-        { id: 'feed', label: 'Feed View', icon: LayoutList },
-        { id: 'calendar', label: 'Calendar View', icon: Calendar },
-        { id: 'grid', label: 'Grid View', icon: Grid },
-        { id: 'list', label: 'List View', icon: List }
+        { id: 'feed', label: 'Feed', icon: LayoutList },
+        { id: 'calendar', label: 'Calendar', icon: Calendar },
+        { id: 'grid', label: 'Grid', icon: Grid },
+        { id: 'list', label: 'List', icon: List }
     ];
 
-    const currentViewObj = views.find(v => v.id === currentView) || views[0];
-    const CurrentIcon = currentViewObj.icon;
-
     return (
-        <div style={{ position: 'relative' }}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="btn btn-outline"
-                style={{
-                    gap: '0.375rem',
-                    display: 'flex',
-                    alignItems: 'center'
-                }}
-            >
-                <CurrentIcon size={15} />
-                <span style={{ fontSize: '0.875rem' }}>{currentViewObj.label}</span>
-                <ChevronDown size={13} />
-            </button>
-
-            {isOpen && (
-                <>
-                    <div
+        <div
+            style={{
+                display: 'inline-flex',
+                padding: '2px',
+                borderRadius: '999px',
+                background: 'rgba(255,255,255,0.7)',
+                border: '1px solid var(--input-border)',
+                boxShadow: '0 1px 3px rgba(15,23,42,0.08)'
+            }}
+        >
+            {views.map(view => {
+                const Icon = view.icon;
+                const isActive = view.id === currentView;
+                return (
+                    <button
+                        key={view.id}
+                        type="button"
+                        onClick={() => onViewChange(view.id)}
+                        // Compact header redesign — pill-style view toggle
                         style={{
-                            position: 'fixed',
-                            inset: 0,
-                            zIndex: 99
-                        }}
-                        onClick={() => setIsOpen(false)}
-                    />
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 'calc(100% + 8px)',
-                            left: 0,
-                            minWidth: '180px',
-                            background: 'white',
-                            border: '1px solid var(--input-border)',
-                            borderRadius: 'var(--radius-md)',
-                            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-                            padding: '0.5rem',
-                            zIndex: 100
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '5px 12px',
+                            borderRadius: '999px',
+                            background: isActive ? 'var(--color-primary)' : 'transparent',
+                            color: isActive ? '#ffffff' : 'var(--text-muted)',
+                            fontSize: '0.78rem',
+                            fontWeight: isActive ? 600 : 500,
+                            transition: 'background 0.18s ease, color 0.18s ease, transform 0.12s ease'
                         }}
                     >
-                        {views.map(view => {
-                            const Icon = view.icon;
-                            return (
-                                <button
-                                    key={view.id}
-                                    onClick={() => {
-                                        onViewChange(view.id);
-                                        setIsOpen(false);
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        padding: '0.625rem 0.75rem',
-                                        borderRadius: 'var(--radius-sm)',
-                                        border: 'none',
-                                        background: view.id === currentView ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                                        color: view.id === currentView ? 'var(--color-primary)' : 'var(--text-main)',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                        fontSize: '0.875rem',
-                                        fontWeight: view.id === currentView ? 600 : 500,
-                                        textAlign: 'left'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (view.id !== currentView) {
-                                            e.currentTarget.style.background = 'rgba(0, 0, 0, 0.03)';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (view.id !== currentView) {
-                                            e.currentTarget.style.background = 'transparent';
-                                        }
-                                    }}
-                                >
-                                    <Icon size={15} />
-                                    {view.label}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </>
-            )}
+                        <Icon size={13} />
+                        {view.label}
+                    </button>
+                );
+            })}
         </div>
     );
 };
