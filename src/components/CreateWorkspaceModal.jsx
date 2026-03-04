@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Card from './ui/Card';
 import Button from './ui/Button';
-import { X, Plus, Trash2, Globe, ArrowRight, Loader2 } from 'lucide-react';
+import { X, Plus, Trash2, Globe, ArrowRight, Loader2, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { createWorkspace, inviteToWorkspace } from '../services/workspaceService';
@@ -138,44 +138,8 @@ const Step2Members = ({ members, setMembers, onSubmit, onSkip, loading }) => {
         setMembers(updated);
     };
 
-    const handleRoleHover = (e, roleKey) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setTooltip({ role: roleKey, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
-    };
-
     return (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            {/* Fixed-position tooltip rendered outside modal overflow */}
-            {tooltip.role && ROLE_DESCRIPTIONS[tooltip.role.split('-')[1]] && (
-                <div style={{
-                    position: 'fixed',
-                    top: tooltip.y,
-                    left: tooltip.x,
-                    transform: 'translateX(-50%)',
-                    background: '#1f2937',
-                    color: 'white',
-                    fontSize: '0.75rem',
-                    padding: '6px 10px',
-                    borderRadius: '7px',
-                    zIndex: 999999,
-                    pointerEvents: 'none',
-                    whiteSpace: 'nowrap',
-                    boxShadow: '0 4px 14px rgba(0,0,0,0.25)',
-                }}>
-                    {ROLE_DESCRIPTIONS[tooltip.role.split('-')[1]]}
-                    <div style={{
-                        position: 'absolute',
-                        top: '-4px',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: 0,
-                        height: 0,
-                        borderLeft: '4px solid transparent',
-                        borderRight: '4px solid transparent',
-                        borderBottom: '4px solid #1f2937',
-                    }} />
-                </div>
-            )}
 
             <div style={{ marginBottom: '1.5rem' }}>
                 <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#111827', marginBottom: '0.25rem' }}>
@@ -195,26 +159,62 @@ const Step2Members = ({ members, setMembers, onSubmit, onSkip, loading }) => {
                                 <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '0.35rem' }}>
                                     Email
                                 </label>
-                                <input
-                                    type="email"
-                                    value={member.email}
-                                    onChange={e => updateMember(index, 'email', e.target.value)}
-                                    placeholder="colleague@example.com"
-                                    disabled={loading}
-                                    style={{
-                                        width: '100%',
-                                        boxSizing: 'border-box',
-                                        padding: '0.6rem 0.8rem',
-                                        border: '1.5px solid #e5e7eb',
-                                        borderRadius: '8px',
-                                        fontSize: '0.88rem',
-                                        color: '#111827',
-                                        outline: 'none',
-                                        transition: 'border-color 0.15s',
-                                    }}
-                                    onFocus={e => e.target.style.borderColor = '#6366f1'}
-                                    onBlur={e => e.target.style.borderColor = '#e5e7eb'}
-                                />
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <input
+                                        type="email"
+                                        value={member.email}
+                                        onChange={e => updateMember(index, 'email', e.target.value)}
+                                        placeholder="colleague@example.com"
+                                        disabled={loading}
+                                        style={{
+                                            width: '100%',
+                                            boxSizing: 'border-box',
+                                            padding: '0.6rem 2.5rem 0.6rem 0.8rem',
+                                            border: '1.5px solid #e5e7eb',
+                                            borderRadius: '8px',
+                                            fontSize: '0.88rem',
+                                            color: '#111827',
+                                            outline: 'none',
+                                            transition: 'border-color 0.15s',
+                                        }}
+                                        onFocus={e => e.target.style.borderColor = '#6366f1'}
+                                        onBlur={e => e.target.style.borderColor = '#e5e7eb'}
+                                    />
+                                    <button
+                                        type="button"
+                                        disabled={loading || !member.email}
+                                        onClick={e => {
+                                            e.preventDefault();
+                                            // Handle arrow click (e.g. implicitly save member or move to next)
+                                            if (member.email && index === members.length - 1) {
+                                                addMember();
+                                            }
+                                        }}
+                                        style={{
+                                            position: 'absolute',
+                                            right: '6px',
+                                            background: member.email ? '#eef2ff' : 'transparent',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: member.email ? '#4f46e5' : '#9ca3af',
+                                            cursor: member.email ? 'pointer' : 'default',
+                                            transition: 'all 0.2s',
+                                        }}
+                                        onMouseEnter={e => {
+                                            if (member.email) e.currentTarget.style.background = '#e0e7ff';
+                                        }}
+                                        onMouseLeave={e => {
+                                            if (member.email) e.currentTarget.style.background = '#eef2ff';
+                                        }}
+                                    >
+                                        <Send size={15} strokeWidth={2.5} style={{ marginLeft: '-1px' }} />
+                                    </button>
+                                </div>
                             </div>
                             {members.length > 1 && (
                                 <button
@@ -248,28 +248,70 @@ const Step2Members = ({ members, setMembers, onSubmit, onSkip, loading }) => {
                             </label>
                             {ROLES.map(r => {
                                 const active = member.role === r;
+                                const tooltipKey = `${index}-${r}`;
+                                const isHovered = tooltip.role === tooltipKey;
+
                                 return (
-                                    <button
+                                    <div
                                         key={r}
-                                        type="button"
-                                        disabled={loading}
-                                        onClick={() => updateMember(index, 'role', r)}
-                                        onMouseEnter={e => handleRoleHover(e, `${index}-${r}`)}
+                                        style={{ position: 'relative' }}
+                                        onMouseEnter={() => setTooltip({ role: tooltipKey, x: 0, y: 0 })}
                                         onMouseLeave={() => setTooltip({ role: null, x: 0, y: 0 })}
-                                        style={{
-                                            padding: '0.3rem 0.85rem',
-                                            borderRadius: '999px',
-                                            border: `1.5px solid ${active ? '#6366f1' : '#e5e7eb'}`,
-                                            background: active ? 'rgba(99,102,241,0.08)' : 'white',
-                                            color: active ? '#6366f1' : '#6b7280',
-                                            fontSize: '0.82rem',
-                                            fontWeight: active ? 600 : 400,
-                                            cursor: 'pointer',
-                                            transition: 'all 0.15s',
-                                        }}
                                     >
-                                        {r}
-                                    </button>
+                                        {/* Tooltip Popup */}
+                                        {isHovered && ROLE_DESCRIPTIONS[r] && (
+                                            <div style={{
+                                                position: 'absolute',
+                                                bottom: '100%',
+                                                left: r === 'Admin' ? '0' : '50%',
+                                                transform: r === 'Admin' ? 'translate(0, -8px)' : 'translate(-50%, -8px)',
+                                                background: '#1f2937',
+                                                color: 'white',
+                                                padding: '8px 12px',
+                                                borderRadius: '6px',
+                                                fontSize: '12px',
+                                                fontWeight: 500,
+                                                lineHeight: '1.4',
+                                                whiteSpace: 'normal',
+                                                width: 'max-content',
+                                                maxWidth: '180px',
+                                                textAlign: r === 'Admin' ? 'left' : 'center',
+                                                zIndex: 100,
+                                                pointerEvents: 'none',
+                                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+                                            }}>
+                                                {ROLE_DESCRIPTIONS[r]}
+                                                {/* Little triangle arrow pointing down */}
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    left: r === 'Admin' ? '24px' : '50%',
+                                                    transform: 'translateX(-50%)',
+                                                    borderWidth: '5px',
+                                                    borderStyle: 'solid',
+                                                    borderColor: '#1f2937 transparent transparent transparent'
+                                                }} />
+                                            </div>
+                                        )}
+                                        <button
+                                            type="button"
+                                            disabled={loading}
+                                            onClick={() => updateMember(index, 'role', r)}
+                                            style={{
+                                                padding: '0.3rem 0.85rem',
+                                                borderRadius: '999px',
+                                                border: `1.5px solid ${active ? '#6366f1' : '#e5e7eb'}`,
+                                                background: active ? 'rgba(99,102,241,0.08)' : 'white',
+                                                color: active ? '#6366f1' : '#6b7280',
+                                                fontSize: '0.82rem',
+                                                fontWeight: active ? 600 : 400,
+                                                cursor: 'pointer',
+                                                transition: 'all 0.15s',
+                                            }}
+                                        >
+                                            {r}
+                                        </button>
+                                    </div>
                                 );
                             })}
                         </div>
@@ -416,7 +458,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onCreated }) => {
 
         const workspaceId = createdWorkspaceId || Date.now();
         console.log('Finalizing workspace', { workspaceId, name, timezone, members });
-        
+
         if (onCreated) {
             onCreated({ id: workspaceId, name, timezone });
         }

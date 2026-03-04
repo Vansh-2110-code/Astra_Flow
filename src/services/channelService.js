@@ -14,8 +14,60 @@ import api from './api';
  * @param {string} workspaceId - The workspace ID to connect Facebook to
  * @returns {Promise} - Resolves with redirect URL or initiates redirect
  */
+/**
+ * Initiate Facebook OAuth flow.
+ * Endpoint: GET /api/channels/facebook/login/?workspace_id=<workspace_id>
+ */
 export const initiateFacebookLogin = (workspaceId) => {
-    window.location.href = `/api/channels/facebook/login/?workspace_id=${workspaceId}`;
+    const baseUrl = api.defaults.baseURL.replace(/\/api\/?$/, '');
+    window.location.href = `${baseUrl}/api/channels/facebook/login/?workspace_id=${workspaceId}`;
+};
+
+/**
+ * Get Facebook Channels for a workspace.
+ * Endpoint: GET /api/channels/facebook/channels/?workspace_id={workspaceId}
+ */
+export const getFacebookChannels = async (workspaceId) => {
+    const res = await api.get('/channels/facebook/channels/', { params: { workspace_id: workspaceId } });
+    return res.data;
+};
+
+/**
+ * Delete a Facebook Channel from a workspace.
+ * Endpoint: DELETE /api/channels/facebook/channels/<channel_id>/?workspace_id={workspaceId}
+ */
+export const deleteFacebookChannel = async (channelId, workspaceId) => {
+    const res = await api.delete(`/channels/facebook/channels/${channelId}/`, { params: { workspace_id: workspaceId } });
+    return res.data;
+};
+
+/**
+ * Create a Facebook Post.
+ * Endpoint: POST /api/channels/<channel_id>/facebook/create-post/
+ */
+export const createFacebookPost = async (channelId, payload) => {
+    // Note: Do NOT set Content-Type manually for FormData. 
+    // Axios/Browser will handle multipart boundary automatically.
+    const res = await api.post(`/channels/${channelId}/facebook/create-post/`, payload);
+    return res.data;
+};
+
+/**
+ * Get Facebook Posts for a channel.
+ * Endpoint: GET /api/channels/<channel_id>/facebook/posts/
+ */
+export const getFacebookPosts = async (channelId) => {
+    const res = await api.get(`/channels/${channelId}/facebook/posts/`);
+    return res.data;
+};
+
+/**
+ * Get Facebook Post Detail.
+ * Endpoint: GET /api/channels/<channel_id>/facebook/posts/<post_id>/
+ */
+export const getFacebookPostDetail = async (channelId, postId) => {
+    const res = await api.get(`/channels/${channelId}/facebook/posts/${postId}/`);
+    return res.data;
 };
 
 /**

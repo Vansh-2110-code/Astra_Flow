@@ -13,17 +13,19 @@ import FeedView from '../components/views/FeedView';
 import CalendarView from '../components/views/CalendarView';
 import GridView from '../components/views/GridView';
 import ListView from '../components/views/ListView';
-import { Plus, SlidersHorizontal, Image, Share2, PenSquare, ChevronDown, LayoutGrid, List, CalendarDays, Rss } from 'lucide-react';
+import { Plus, SlidersHorizontal, Image, Share2, PenSquare, ChevronDown, LayoutGrid, List, CalendarDays, Rss, Facebook, Instagram, Twitter, Linkedin, Youtube, Video } from 'lucide-react';
 import { posts as initialPosts } from '../data/mockData';
 import { useNotifications } from '../contexts/NotificationContext';
 import MediaLibraryModal from '../components/MediaLibraryModal';
 import ShareModal from '../components/ShareModal';
+import { getFacebookPosts } from '../services/channelService';
 
 const Content = () => {
     const { workspaceId } = useParams();
     const location = useLocation();
     const [currentView, setCurrentView] = useState('feed');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [initialModalTab, setInitialModalTab] = useState('Post');
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [isCommentsPanelOpen, setIsCommentsPanelOpen] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
@@ -36,6 +38,7 @@ const Content = () => {
     const [showViewDropdown, setShowViewDropdown] = useState(false);
     const viewDropdownRef = useRef(null);
     const currentUser = 'Admin';
+    const [isLoadingPosts, setIsLoadingPosts] = useState(false);
 
     const {
         checkScheduledPosts,
@@ -161,24 +164,28 @@ const Content = () => {
     const handleAddComment = (postId, comment) => {
         setPosts(prevPosts =>
             prevPosts.map(post =>
-                post.id === postId
+                String(post.id) === String(postId)
                     ? { ...post, comments: [...(post.comments || []), comment] }
                     : post
             )
         );
+
+        // Ensure the active post in the side panel also updates if it's the same one
         setSelectedPost(prev => {
-            if (!prev) return null;
-            return {
-                ...prev,
-                comments: [...(prev.comments || []), comment]
-            };
+            if (prev && String(prev.id) === String(postId)) {
+                return {
+                    ...prev,
+                    comments: [...(prev.comments || []), comment]
+                };
+            }
+            return prev;
         });
 
         // Trigger comment notification
-        const post = posts.find(p => p.id === postId);
-        if (post) {
+        const targetPost = posts.find(p => String(p.id) === String(postId));
+        if (targetPost) {
             const isHighlightComment = comment.selection !== null && comment.selection !== undefined;
-            notifyComment(post, comment.author, isHighlightComment);
+            notifyComment(targetPost, comment.author, isHighlightComment);
         }
     };
 
@@ -193,6 +200,51 @@ const Content = () => {
         list: 'List'
     };
     const currentViewLabel = currentViewLabelMap[currentView] || 'Feed';
+
+    const loadFacebookPosts = (channelId) => {
+        setIsLoadingPosts(true);
+        getFacebookPosts(channelId)
+            .then(data => {
+                if (data.posts) {
+                    const mappedPosts = data.posts.map(p => ({
+                        id: `fb_api_${p.id}`,
+                        author: 'Facebook Page',
+                        date: new Date(p.created_time).toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }),
+                        content: p.message || '',
+                        // Mapping media: ensure it's always an array. 
+                        // Backend sample uses 'media_url'. Fallback to empty array if missing/empty.
+                        media: p.media_url ? [p.media_url] : [],
+                        platform: 'Facebook',
+                        icon: Facebook,
+                        // Mapping media types: IMAGE -> Post, MULTI_IMAGE -> Carousel, VIDEO -> Reel
+                        type: p.media_type === 'VIDEO' ? 'Reel' : (p.media_type === 'MULTI_IMAGE' ? 'Carousel' : 'Post'),
+                        status: p.status === 'published' ? 'Published' : 'Draft',
+                        avatar: null,
+                        likes: 0,
+                        commentsCount: 0,
+                        shares: 0,
+                        comments: [],
+                        approved: true,
+                        approvedBy: [currentUser],
+                        facebook_post_id: p.facebook_post_id
+                    }));
+                    setPosts(mappedPosts);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to load Facebook posts:", err);
+                setPosts(initialPosts); // fallback
+            })
+            .finally(() => {
+                setIsLoadingPosts(false);
+            });
+    };
 
     // UI redesign inspired by Plannable
     // Layout restructuring (non-breaking)
@@ -211,7 +263,18 @@ const Content = () => {
         if (viewParam && ['feed', 'calendar', 'grid', 'list'].includes(viewParam)) {
             setCurrentView(viewParam);
         }
+
+        const channelIdParam = params.get('channel_id');
+
+        // Fetch dynamic Facebook posts if applicable
+        if (platformParam === 'Facebook' && channelIdParam) {
+            loadFacebookPosts(channelIdParam);
+        } else {
+            // Revert to initial posts if not a dynamic channel
+            setPosts(initialPosts);
+        }
     }, [location.search]);
+    console.log(posts);
 
     const renderView = () => {
         switch (currentView) {
@@ -234,6 +297,10 @@ const Content = () => {
                     onOpenComments={handleOpenComments}
                     onAddComment={handleAddComment}
                     showStoriesStrip={true}
+                    onOpenNewStory={() => {
+                        setInitialModalTab('Story');
+                        setIsModalOpen(true);
+                    }}
                 />;
         }
     };
@@ -302,31 +369,38 @@ const Content = () => {
             <div style={{ flex: 1 }} />
 
             {/* Actions — right side of topbar content area */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginRight: '12px' }}>
                 <FilterDropdown onFilterChange={handleFilterChange} />
                 <button
                     type="button"
                     className="btn btn-ghost"
                     onClick={() => setIsMediaOpen(true)}
-                    style={{ padding: '5px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-muted)' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}
                 >
-                    <Image size={14} /> Media
+                    <Image size={15} /> <span className="hide-on-mobile">Media</span>
                 </button>
                 <button
                     type="button"
                     className="btn btn-ghost"
                     onClick={() => setIsShareOpen(true)}
-                    style={{ padding: '5px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: 'var(--text-muted)' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}
                 >
-                    <Share2 size={14} /> Share
+                    <Share2 size={15} /> <span className="hide-on-mobile">Share</span>
                 </button>
+                <div style={{ width: '1px', height: '24px', background: 'var(--input-border)', margin: '0 4px' }} />
                 <button
                     type="button"
-                    className="btn btn-primary"
+                    className="btn btn-primary btn-sm"
                     onClick={() => setIsModalOpen(true)}
-                    style={{ padding: '6px 14px', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', borderRadius: 'var(--radius-sm)' }}
+                    style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        padding: '0 6px',
+                        fontSize: '0.75rem'
+                    }}
                 >
-                    <PenSquare size={14} /> Compose
+                    <PenSquare size={12} /> Compose
                 </button>
             </div>
         </>
@@ -339,9 +413,16 @@ const Content = () => {
                 onClose={() => {
                     setIsModalOpen(false);
                     setPrefilledDate('');
+                    setInitialModalTab('Post'); // reset back to default
                 }}
                 prefilledDate={prefilledDate}
                 onPostCreated={handlePostCreated}
+                initialTab={initialModalTab}
+                onPublishSuccess={() => {
+                    const params = new URLSearchParams(location.search);
+                    const channelId = params.get('channel_id');
+                    if (channelId) loadFacebookPosts(channelId);
+                }}
             />
             <DraftsPanel
                 isOpen={isPanelOpen}

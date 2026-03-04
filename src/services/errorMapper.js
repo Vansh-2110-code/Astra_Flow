@@ -43,8 +43,8 @@ export const mapError = (error) => {
     if (!error) return 'An unexpected error occurred';
 
     // 1. Handle Network/Connection errors
-    if (error.message === 'Network Error') {
-        return 'Connection lost. Please check your internet.';
+    if (error.message === 'Network Error' || error.code === 'ERR_NETWORK') {
+        return 'Our servers are currently unreachable. Please check your connection or try again later.';
     }
 
     const response = error.response;
@@ -77,6 +77,7 @@ export const mapError = (error) => {
         if (typeof data.detail === 'string') {
             // Check common detail messages
             if (data.detail.toLowerCase().includes('credentials')) return ERROR_MAPPINGS['invalid_credentials'];
+            if (data.detail.toLowerCase().includes('user not found')) return ERROR_MAPPINGS['user_not_found'];
             return data.detail;
         }
 

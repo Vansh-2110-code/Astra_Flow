@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Loader, CheckCircle, AlertCircle, Chrome } from 'lucide-react';
 import { login, storeAuthData } from '../services/authService';
+import Toast from './ui/Toast';
 import '../styles/login.css';
 
 const Login = () => {
@@ -14,6 +15,7 @@ const Login = () => {
     const [rememberMe, setRememberMe] = useState(() => {
         return localStorage.getItem('rememberMe') === 'true';
     });
+    const [toast, setToast] = useState(null);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -28,7 +30,8 @@ const Login = () => {
 
             const response = await login(email, password);
             setSuccess(true);
-            
+            setToast({ type: 'success', message: 'Welcome back! Redirecting...' });
+
             // Store tokens based on rememberMe preference
             storeAuthData(response, rememberMe);
 
@@ -40,6 +43,7 @@ const Login = () => {
         } catch (err) {
             // Error is already mapped to a friendly message by the api interceptor
             setError(err.message);
+            setToast({ type: 'error', message: err.message });
         } finally {
             setLoading(false);
         }
@@ -145,6 +149,14 @@ const Login = () => {
                 Don’t have an account?
                 <Link to="/signup">Sign up</Link>
             </div>
+
+            {toast && (
+                <Toast
+                    type={toast.type}
+                    message={toast.message}
+                    onClose={() => setToast(null)}
+                />
+            )}
         </div>
     );
 };

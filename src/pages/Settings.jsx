@@ -5,7 +5,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Building2, Palette, Shield, Plug, Lock, Bell, AlertTriangle, Copy, Check, User, Camera, Loader2, Globe, Facebook } from 'lucide-react';
 import { updateWorkspace, getWorkspaceDetail, deleteWorkspace } from '../services/workspaceService';
-import { initiateFacebookLogin } from '../services/channelService';
+import { initiateFacebookLogin, getFacebookChannels, deleteFacebookChannel } from '../services/channelService';
 
 const TABS = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -31,12 +31,13 @@ const INTEGRATION_APPS = [
 ];
 
 const TIMEZONES = [
-    { value: 'Asia/Kolkata', label: '(GMT+05:30) India Standard Time - Kolkata' },
-    { value: 'UTC', label: '(GMT+00:00) Central Standard Time - UTC' },
-    { value: 'America/New_York', label: '(GMT-05:00) Eastern Standard Time - New York' },
-    { value: 'Europe/London', label: '(GMT+00:00) Western European Time - London' },
-    { value: 'Asia/Dubai', label: '(GMT+04:00) Gulf Standard Time - Dubai' },
-    { value: 'Australia/Sydney', label: '(GMT+11:00) Australian Eastern Daylight Time - Sydney' }
+    { label: "UTC", value: "UTC" },
+    { label: "Asia/Kolkata (IST)", value: "Asia/Kolkata" },
+    { label: "America/New_York (EST)", value: "America/New_York" },
+    { label: "America/Los_Angeles (PST)", value: "America/Los_Angeles" },
+    { label: "Europe/London (GMT)", value: "Europe/London" },
+    { label: "Europe/Paris (CET)", value: "Europe/Paris" },
+    { label: "Australia/Sydney (AEST)", value: "Australia/Sydney" }
 ];
 
 const defaultMatrix = () => {
@@ -74,7 +75,7 @@ const Settings = () => {
     const [timezone, setTimezone] = useState('UTC');
     const [twoFAEnabled, setTwoFAEnabled] = useState(false);
     const [permMatrix, setPermMatrix] = useState(defaultMatrix);
-    
+
     // Initialize integrations from localStorage
     const [integrations, setIntegrations] = useState(() => {
         try {
@@ -95,13 +96,14 @@ const Settings = () => {
             notion: false
         };
     });
-    
+
     const [maskedKey, setMaskedKey] = useState('lc_live_••••••••••••••••••••');
     const [keyCopied, setKeyCopied] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
-    
+    const [connectedFacebookChannels, setConnectedFacebookChannels] = useState([]);
+
     // Save integrations to localStorage whenever they change
     useEffect(() => {
         if (workspaceId) {
@@ -124,22 +126,35 @@ const Settings = () => {
                     // The function will handle the redirect, so no further action needed
                 } catch (error) {
                     console.error('Failed to initiate Facebook login:', error);
-                    setToast({ 
-                        type: 'error', 
-                        message: 'Failed to connect Facebook. Please try again.' 
+                    setToast({
+                        type: 'error',
+                        message: 'Failed to connect Facebook. Please try again.'
                     });
                     setTimeout(() => setToast(null), 4000);
                 }
             } else {
                 // Disconnect Facebook
-                setIntegrations(prev => ({ ...prev, facebook: false }));
-                setToast({ 
-                    type: 'success', 
-                    message: 'Facebook disconnected successfully.' 
-                });
+                try {
+                    // Assuming we disconnect all or there's a specific channel. Since the UI is a toggle per platform, 
+                    // we might need to disconnect the first/all connected channels if there's no specific channel selector here.
+                    // For now, if there's at least one, disconnect the first one to toggle state.
+                    if (connectedFacebookChannels.length > 0) {
+                        await deleteFacebookChannel(connectedFacebookChannels[0].id, workspaceId);
+                    }
+                    setIntegrations(prev => ({ ...prev, facebook: false }));
+                    setConnectedFacebookChannels([]);
+                    setToast({
+                        type: 'success',
+                        message: 'Facebook disconnected successfully.'
+                    });
+                } catch (error) {
+                    console.error('Failed to disconnect Facebook:', error);
+                    setToast({
+                        type: 'error',
+                        message: 'Failed to disconnect Facebook. Please try again.'
+                    });
+                }
                 setTimeout(() => setToast(null), 3000);
-                // TODO: Call backend API to disconnect Facebook when available
-                // await disconnectChannel(facebookChannelId);
             }
             return;
         }
@@ -171,57 +186,77 @@ const Settings = () => {
     // Handle Facebook OAuth redirect callbacks
     useEffect(() => {
         const facebookStatus = searchParams.get('facebook');
-        
+
         if (facebookStatus) {
             // Set active tab to integrations
             setActiveTab('integrations');
-            
+
             // Handle different Facebook OAuth responses
             switch (facebookStatus) {
                 case 'success':
                     setIntegrations(prev => ({ ...prev, facebook: true }));
-                    setToast({ 
-                        type: 'success', 
-                        message: 'Facebook connected successfully!' 
+                    setToast({
+                        type: 'success',
+                        message: 'Facebook connected successfully!'
                     });
+                    // Refresh channels
+                    if (workspaceId) {
+                        getFacebookChannels(workspaceId).then(data => {
+                            setConnectedFacebookChannels(data.channels || []);
+                        }).catch(console.error);
+                    }
                     break;
-                    
+
                 case 'error':
-                    setToast({ 
-                        type: 'error', 
-                        message: 'Failed to connect Facebook. Please try again.' 
+                    setToast({
+                        type: 'error',
+                        message: 'Failed to connect Facebook. Please try again.'
                     });
                     break;
-                    
+
                 case 'invalid_workspace':
-                    setToast({ 
-                        type: 'error', 
-                        message: 'Invalid workspace. Please check your workspace ID.' 
+                    setToast({
+                        type: 'error',
+                        message: 'Invalid workspace. Please check your workspace ID.'
                     });
                     break;
-                    
+
                 case 'token_failed':
-                    setToast({ 
-                        type: 'error', 
-                        message: 'Failed to obtain Facebook token. Please try again.' 
+                    setToast({
+                        type: 'error',
+                        message: 'Failed to obtain Facebook token. Please try again.'
                     });
                     break;
-                    
+
                 default:
-                    setToast({ 
-                        type: 'error', 
-                        message: 'An unexpected error occurred.' 
+                    setToast({
+                        type: 'error',
+                        message: 'An unexpected error occurred.'
                     });
             }
-            
+
             // Clear toast after 4 seconds
             setTimeout(() => setToast(null), 4000);
-            
+
             // Clean up URL parameters and Facebook hash
             const cleanUrl = window.location.pathname;
             window.history.replaceState({}, '', cleanUrl);
         }
-    }, [searchParams]);
+    }, [searchParams, workspaceId]);
+
+    // Check actual Facebook connection state on load
+    useEffect(() => {
+        if (!workspaceId) return;
+        getFacebookChannels(workspaceId).then(data => {
+            const channels = data.channels || [];
+            setConnectedFacebookChannels(channels);
+            if (channels.length > 0) {
+                setIntegrations(prev => ({ ...prev, facebook: true }));
+            } else {
+                setIntegrations(prev => ({ ...prev, facebook: false }));
+            }
+        }).catch(err => console.error("Failed to load FB channels", err));
+    }, [workspaceId]);
 
     const handleUpdateWorkspace = async () => {
         setLoading(true);
@@ -583,7 +618,7 @@ const Settings = () => {
                                 {INTEGRATION_APPS.map(app => {
                                     const connected = integrations[app.id];
                                     const AppIcon = app.id === 'facebook' ? Facebook : Plug;
-                                    
+
                                     return (
                                         <Card
                                             key={app.id}

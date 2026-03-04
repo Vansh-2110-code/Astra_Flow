@@ -1,12 +1,13 @@
+import React, { forwardRef } from 'react';
 
-import React from 'react';
-
-const Card = ({ children, className = '', hover = false, ...props }) => {
+const Card = forwardRef(({ children, className = '', hover = false, ...props }, ref) => {
     return (
-        <div className={`card ${hover ? 'card-hover' : ''} ${className}`} {...props}>
+        <div ref={ref} className={`card ${hover ? 'card-hover' : ''} ${className}`} {...props}>
             {children}
         </div>
     );
-};
+});
+
+Card.displayName = 'Card';
 
 export default Card;

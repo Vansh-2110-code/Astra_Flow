@@ -5,6 +5,10 @@
     height: 100vh;
     overflow: hidden;
     background: transparent;
+    max-width: 1600px;
+    margin: 0 auto;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.05);
+    /* subtle separation from infinite body bg */
 }
 
 .sidebar {
@@ -14,9 +18,18 @@
     border-right: 1px solid var(--glass-border);
     display: flex;
     flex-direction: column;
-    padding: 1.25rem 0.9rem;
+    padding: var(--sp-4) var(--sp-3);
     z-index: 50;
-    transition: transform 0.3s ease;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
+    flex-shrink: 0;
+}
+
+.sidebar.collapsed {
+    width: 0;
+    padding: 0;
+    border-right: none;
+    overflow: hidden;
+    opacity: 0;
 }
 
 .sidebar-header {
@@ -28,14 +41,16 @@
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    padding: 0.55rem 0.9rem;
-    border-radius: var(--radius-md);
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--radius-sm);
     color: var(--text-muted);
     text-decoration: none;
-    margin-bottom: 0.15rem;
+    margin-bottom: 2px;
     transition: all 0.2s;
     font-weight: 500;
+    font-size: 0.8rem;
+    min-height: var(--sp-8);
 }
 
 .nav-item:hover {
@@ -44,13 +59,65 @@
     text-decoration: none;
 }
 
-/* Sidebar active state clarity — padding compensates for border to prevent text shift */
+/* Sidebar active state clarity - Planable Style Soft Button */
 .nav-item.active {
-    background: linear-gradient(90deg, rgba(99, 102, 241, 0.1), transparent);
+    background: rgba(99, 102, 241, 0.08);
+    /* Very soft primary tint */
     color: var(--color-primary);
-    border-left: 3px solid var(--color-primary);
-    padding-left: calc(0.9rem - 3px);
     font-weight: 600;
+}
+
+/* Planable-style Connected Apps (Channels) */
+.app-nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-1) var(--sp-3);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    text-decoration: none;
+    margin-bottom: 2px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 0.75rem;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+    position: relative;
+    min-height: 28px;
+}
+
+/* Inactive Icon explicitly greyed */
+.app-nav-item svg {
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+}
+
+.app-nav-item:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+/* Active State: The vertical bar, bold text, and full color */
+.app-nav-item.active {
+    background: transparent;
+    /* No background needed, rely on the bar */
+    color: var(--text-main);
+    /* Active: Dark strong text */
+    font-weight: 600;
+}
+
+/* The Planable Vertical Color Accent */
+.app-nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 3px;
+    background: var(--color-primary);
+    border-radius: 4px;
 }
 
 .main-content {
@@ -62,22 +129,23 @@
 }
 
 .topbar {
-    height: 60px;
+    min-height: 60px;
     background: rgba(255, 255, 255, 0.5);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--glass-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 1.5rem;
+    padding: 0.5rem 1.5rem;
     z-index: 40;
+    flex-wrap: wrap;
+    gap: 0.8rem;
 }
 
-/* Spacing system — reduced padding for SaaS density */
 .page-content {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem 1.25rem;
+    padding: var(--sp-4) var(--sp-5);
     scroll-behavior: smooth;
 }
 
@@ -126,7 +194,7 @@
 }
 
 .post-card {
-    margin-bottom: 0.625rem;
+    margin-bottom: var(--sp-2);
 }
 
 .post-header {
@@ -138,7 +206,7 @@
 
 .post-media {
     width: 100%;
-    height: 220px;
+    height: auto;
     background: #f3f4f6;
     border-radius: 10px;
     margin-bottom: 0.85rem;
@@ -152,6 +220,113 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+/* Consolidated Feed View - High Quality "Minimized" Standard */
+.post-card.minimized {
+    transform: scale(0.95);
+    transform-origin: top center;
+    width: 620px;
+    margin: 0 auto;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.post-card.minimized .post-container {
+    padding: 0.75rem 1rem !important;
+}
+
+.post-card.minimized .post-media {
+    margin-bottom: 0.5rem;
+}
+
+.post-card.minimized [data-post-content] {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.8rem !important;
+    line-height: 1.4 !important;
+}
+
+/* Story Strip Animation */
+.stories-strip {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--input-border);
+    border-radius: var(--radius-md);
+    background: #ffffff;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stories-content {
+    max-height: 250px;
+    /* High enough for story cards */
+    opacity: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.4s ease,
+        padding 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0.75rem 1rem 1rem 1rem;
+    display: flex;
+    gap: var(--sp-2);
+}
+
+.stories-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.story-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.story-toggle-icon.collapsed {
+    transform: rotate(180deg);
+}
+
+.story-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+    background: #f9fafb;
+    border-bottom: 1px solid var(--input-border);
+}
+
+.story-header:hover {
+    background: #f3f4f6;
+}
+
+/* Premium Story Date Badge */
+.story-date-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: white;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    letter-spacing: 0.02em;
+    z-index: 5;
+    pointer-events: none;
 }
 
 /* Calendar View */
@@ -200,6 +375,7 @@
         opacity: 0;
         transform: scale(0.9);
     }
+
     to {
         opacity: 0.9;
         transform: scale(1);
@@ -295,4 +471,26 @@
 
 .team-row:last-child td {
     border-bottom: none;
+}
+
+/* Responsive Utilities */
+@keyframes popIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.92);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+}
+
+.highlight-comment {
+    transition: background-color 0.2s, border-bottom-color 0.2s;
+}
+
+.highlight-comment:hover {
+    background-color: #fcebb0 !important;
+    border-bottom-color: #b45309 !important;
 }

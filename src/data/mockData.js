@@ -2,37 +2,55 @@
 import { Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
 
 export const workspaces = [
-    { 
-        id: 1, 
-        name: "Mint Cloud", 
-        posts: 24, 
+    {
+        id: 1,
+        name: "Mint Cloud",
+        posts: 24,
         activity: "2 hours ago",
         connectedPlatforms: ['Instagram', 'Facebook', 'LinkedIn', 'X (Twitter)', 'YouTube', 'Pinterest', 'Threads', 'TikTok', 'Snapchat', 'Reddit']
     },
-    { 
-        id: 2, 
-        name: "Social Media - Q1", 
-        posts: 12, 
+    {
+        id: 2,
+        name: "Social Media - Q1",
+        posts: 12,
         activity: "Yesterday",
         connectedPlatforms: ['Instagram', 'Facebook']
     },
-    { 
-        id: 3, 
-        name: "Product Launch", 
-        posts: 8, 
+    {
+        id: 3,
+        name: "Product Launch",
+        posts: 8,
         activity: "5 days ago",
         connectedPlatforms: ['Instagram', 'LinkedIn']
     },
-    { 
-        id: 4, 
-        name: "Brand Awareness", 
-        posts: 156, 
+    {
+        id: 4,
+        name: "Brand Awareness",
+        posts: 156,
         activity: "1 week ago",
         connectedPlatforms: ['Instagram', 'Facebook', 'LinkedIn']
     },
 ];
 
 export const posts = [
+    {
+        id: "mock_carousel",
+        platform: "Instagram",
+        icon: Instagram,
+        content: "Swipe left to see our brand new 2026 UI Kit! 🚀✨ #Carousel #Design #UI",
+        media: [
+            "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=500&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&auto=format&fit=crop&q=60",
+            "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=500&auto=format&fit=crop&q=60"
+        ],
+        date: "2026-03-02",
+        status: "Draft",
+        author: "Sarah J.",
+        approved: false,
+        approvedBy: [],
+        type: "Carousel",
+        comments: []
+    },
     {
         id: 1,
         platform: "Instagram",

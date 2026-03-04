@@ -242,21 +242,34 @@ const CommentsPanel = ({ isOpen, onClose, post, onAddComment }) => {
                         </div>
                     </div>
 
-                    <div style={{ position: 'relative' }}>
-                        <textarea
+                    <div style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        border: '1px solid var(--input-border)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '4px',
+                        background: 'white',
+                        transition: 'border-color 0.2s'
+                    }}>
+                        <input
+                            type="text"
                             value={newComment}
                             onChange={(e) => setNewComment(e.target.value)}
                             placeholder="Write a comment..."
-                            rows={3}
-                            className="input"
                             style={{
-                                width: '100%',
-                                resize: 'none',
+                                flex: 1,
+                                border: 'none',
+                                outline: 'none',
+                                background: 'transparent',
                                 fontSize: '0.9rem',
-                                paddingRight: '3.5rem'
+                                padding: '0.5rem 0.75rem',
+                                color: 'var(--text-main)',
+                                minWidth: 0
                             }}
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter' && e.ctrlKey) {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
                                     handleSubmit(e);
                                 }
                             }}
@@ -266,10 +279,8 @@ const CommentsPanel = ({ isOpen, onClose, post, onAddComment }) => {
                             disabled={!newComment.trim()}
                             onClick={(e) => { e.preventDefault(); handleSubmit(e); }}
                             style={{
-                                position: 'absolute',
-                                right: '0.75rem',
-                                bottom: '0.75rem',
-                                padding: '0.5rem',
+                                width: '32px',
+                                height: '32px',
                                 background: newComment.trim() ? 'var(--color-primary)' : '#e5e7eb',
                                 color: 'white',
                                 border: 'none',
@@ -278,7 +289,9 @@ const CommentsPanel = ({ isOpen, onClose, post, onAddComment }) => {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                transition: 'all 0.2s'
+                                transition: 'all 0.2s',
+                                flexShrink: 0,
+                                marginRight: '2px'
                             }}
                             onMouseEnter={(e) => {
                                 if (newComment.trim()) {

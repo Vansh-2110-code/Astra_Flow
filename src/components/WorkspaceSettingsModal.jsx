@@ -5,21 +5,13 @@ import { updateWorkspace } from '../services/workspaceService';
 
 /* Common IANA timezones list */
 const TIMEZONES = [
-    { label: 'UTC (GMT+0)', value: 'UTC' },
-    { label: 'London (GMT+0)', value: 'Europe/London' },
-    { label: 'Paris / Berlin (GMT+1)', value: 'Europe/Paris' },
-    { label: 'Istanbul (GMT+3)', value: 'Europe/Istanbul' },
-    { label: 'Dubai (GMT+4)', value: 'Asia/Dubai' },
-    { label: 'Kolkata (GMT+5:30)', value: 'Asia/Kolkata' },
-    { label: 'Bangkok (GMT+7)', value: 'Asia/Bangkok' },
-    { label: 'Singapore (GMT+8)', value: 'Asia/Singapore' },
-    { label: 'Tokyo (GMT+9)', value: 'Asia/Tokyo' },
-    { label: 'Sydney (GMT+10)', value: 'Australia/Sydney' },
-    { label: 'São Paulo (GMT-3)', value: 'America/Sao_Paulo' },
-    { label: 'New York (GMT-5)', value: 'America/New_York' },
-    { label: 'Chicago (GMT-6)', value: 'America/Chicago' },
-    { label: 'Denver (GMT-7)', value: 'America/Denver' },
-    { label: 'Los Angeles (GMT-8)', value: 'America/Los_Angeles' },
+    { label: "UTC", value: "UTC" },
+    { label: "Asia/Kolkata (IST)", value: "Asia/Kolkata" },
+    { label: "America/New_York (EST)", value: "America/New_York" },
+    { label: "America/Los_Angeles (PST)", value: "America/Los_Angeles" },
+    { label: "Europe/London (GMT)", value: "Europe/London" },
+    { label: "Europe/Paris (CET)", value: "Europe/Paris" },
+    { label: "Australia/Sydney (AEST)", value: "Australia/Sydney" }
 ];
 
 const overlay = {

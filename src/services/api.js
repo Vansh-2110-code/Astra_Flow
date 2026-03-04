@@ -4,23 +4,28 @@
 import axios from 'axios';
 import { logout } from './authService';
 import { mapError } from './errorMapper';
+import { getOrCreateDeviceId } from '../utils/deviceId';
 
 const api = axios.create({
     baseURL: `${(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')}/api`,
     headers: {
-        'Content-Type': 'application/json',
         'Accept': 'application/json',
     },
 });
 
-// ── Request Interceptor: auto-attach Bearer token ──
+// ── Request Interceptor: auto-attach Bearer token & Device ID ──
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('access_token') || 
-                      sessionStorage.getItem('access_token');
+        // Attach standard auth token
+        const token = localStorage.getItem('access_token') ||
+            sessionStorage.getItem('access_token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
+        // Attach secure device fingerprint
+        //config.headers['X-Device-Id'] = getOrCreateDeviceId();
+
         return config;
     },
     (error) => Promise.reject(error)
@@ -50,7 +55,8 @@ api.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             // Don't try to refresh if the failing request IS the refresh or login call
             if (originalRequest.url?.includes('/v1/token/')) {
-                return Promise.reject(error);
+                const message = mapError(error);
+                return Promise.reject(new Error(message));
             }
 
             if (isRefreshing) {
@@ -67,8 +73,8 @@ api.interceptors.response.use(
             isRefreshing = true;
 
             try {
-                const refreshToken = localStorage.getItem('refresh_token') || 
-                                      sessionStorage.getItem('refresh_token');
+                const refreshToken = localStorage.getItem('refresh_token') ||
+                    sessionStorage.getItem('refresh_token');
                 if (!refreshToken) {
                     throw new Error('No refresh token available');
                 }
@@ -81,10 +87,10 @@ api.interceptors.response.use(
                 );
 
                 const newAccessToken = data.access;
-                
+
                 // Store in the same storage type as the refresh token
-                const storage = localStorage.getItem('refresh_token') ? 
-                                localStorage : sessionStorage;
+                const storage = localStorage.getItem('refresh_token') ?
+                    localStorage : sessionStorage;
                 storage.setItem('access_token', newAccessToken);
 
                 // If backend also rotates the refresh token

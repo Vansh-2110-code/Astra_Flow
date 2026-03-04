@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, LogOut, ChevronDown, ArrowLeft } from 'lucide-react';
+import { Search, Bell, LogOut, ChevronDown, ArrowLeft, PanelLeft } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import NotificationPanel from '../NotificationPanel';
 import { useNotifications } from '../../contexts/NotificationContext';
@@ -10,7 +10,7 @@ import { getWorkspaces } from '../../services/workspaceService';
 // Compact header redesign — Plannable-style topbar
 // Left: workspace picker + page-injected breadcrumb/actions
 // Right: search, notifications, user avatar
-const Topbar = ({ children }) => {
+const Topbar = ({ children, toggleSidebar, isSidebarOpen }) => {
     const { workspaceId } = useParams();
     const navigate = useNavigate();
     const { getUnreadCount } = useNotifications();
@@ -74,7 +74,29 @@ const Topbar = ({ children }) => {
         <>
             <header className="topbar">
                 {/* Left section: workspace picker + page-injected content (breadcrumb, view switcher, etc.) */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flex: 1, minWidth: 0 }}>
+                    {/* Sidebar Toggle */}
+                    <button
+                        onClick={toggleSidebar}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '0.2rem',
+                            color: 'var(--text-main)',
+                            opacity: 0.7,
+                            transition: 'opacity 0.2s',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                        aria-label="Toggle Sidebar"
+                    >
+                        <PanelLeft size={20} />
+                    </button>
+
                     {/* Workspace switcher — only on workspace pages */}
                     {workspaceId && (
                         <div ref={wsDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
@@ -163,7 +185,7 @@ const Topbar = ({ children }) => {
 
                     {/* Breadcrumb separator after workspace picker */}
                     {workspaceId && children && (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0.15rem' }}>/</span>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 4px' }}>/</span>
                     )}
 
                     {/* Page-injected content: breadcrumb continuation, view switcher, spacer, actions */}
@@ -175,14 +197,15 @@ const Topbar = ({ children }) => {
                 </div>
 
                 {/* Right section: search, notifications, user avatar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
                     <div style={{ position: 'relative' }}>
                         <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
                             type="text"
                             placeholder="Search..."
                             style={{
-                                padding: '5px 8px 5px 28px',
+                                height: '32px',
+                                padding: '0 8px 0 28px',
                                 borderRadius: '20px',
                                 border: '1px solid var(--input-border)',
                                 background: 'rgba(255,255,255,0.5)',
@@ -195,17 +218,17 @@ const Topbar = ({ children }) => {
 
                     <button
                         onClick={() => setIsNotificationPanelOpen(true)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', position: 'relative' }}
+                        style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', position: 'relative', borderRadius: '50%' }}
                     >
                         <Bell size={16} />
                         {unreadCount > 0 && (
                             <>
-                                <span style={{ position: 'absolute', top: -2, right: -2, width: 6, height: 6, background: 'var(--color-secondary)', borderRadius: '50%' }}></span>
+                                <span style={{ position: 'absolute', top: 4, right: 4, width: 6, height: 6, background: 'var(--color-secondary)', borderRadius: '50%' }}></span>
                                 {unreadCount > 9 && (
                                     <span style={{
                                         position: 'absolute',
-                                        top: -8,
-                                        right: -8,
+                                        top: -2,
+                                        right: -4,
                                         minWidth: '16px',
                                         height: '16px',
                                         background: 'var(--color-secondary)',
