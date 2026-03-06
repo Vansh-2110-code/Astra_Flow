@@ -1,11 +1,11 @@
 
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
 import CreatePostModal from '../components/CreatePostModal';
-import ViewSwitcher from '../components/ViewSwitcher';
+
 import FilterDropdown from '../components/FilterDropdown';
 import DraftsPanel from '../components/DraftsPanel';
 import CommentsPanel from '../components/CommentsPanel';
@@ -13,7 +13,8 @@ import FeedView from '../components/views/FeedView';
 import CalendarView from '../components/views/CalendarView';
 import GridView from '../components/views/GridView';
 import ListView from '../components/views/ListView';
-import { Plus, SlidersHorizontal, Image, Share2, PenSquare, ChevronDown, LayoutGrid, List, CalendarDays, Rss, Facebook, Instagram, Twitter, Linkedin, Youtube, Video } from 'lucide-react';
+import { Plus, Image, Share2, PenSquare, Facebook, ChevronDown, Rss, CalendarDays, LayoutGrid, List } from 'lucide-react';
+import { Tooltip, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
 import { posts as initialPosts } from '../data/mockData';
 import { useNotifications } from '../contexts/NotificationContext';
 import MediaLibraryModal from '../components/MediaLibraryModal';
@@ -35,8 +36,7 @@ const Content = () => {
     const [prefilledDate, setPrefilledDate] = useState('');
     const [isMediaOpen, setIsMediaOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
-    const [showViewDropdown, setShowViewDropdown] = useState(false);
-    const viewDropdownRef = useRef(null);
+    const [anchorElView, setAnchorElView] = useState(null);
     const currentUser = 'Admin';
     const [isLoadingPosts, setIsLoadingPosts] = useState(false);
 
@@ -47,17 +47,6 @@ const Content = () => {
         notifyNewPost
     } = useNotifications();
 
-
-    // Close view dropdown on outside click
-    useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (viewDropdownRef.current && !viewDropdownRef.current.contains(e.target)) {
-                setShowViewDropdown(false);
-            }
-        };
-        if (showViewDropdown) document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showViewDropdown]);
 
     // Check for scheduled posts needing approval on mount and periodically
     useEffect(() => {
@@ -100,6 +89,15 @@ const Content = () => {
 
         if (filters.dateTo) {
             filtered = filtered.filter(post => new Date(post.date) <= new Date(filters.dateTo));
+        }
+
+        if (filters.searchQuery) {
+            const q = filters.searchQuery.toLowerCase();
+            filtered = filtered.filter(post =>
+                (post.content && post.content.toLowerCase().includes(q)) ||
+                (post.author && post.author.toLowerCase().includes(q)) ||
+                (post.platform && post.platform.toLowerCase().includes(q))
+            );
         }
 
         return filtered;
@@ -193,13 +191,14 @@ const Content = () => {
     const hasPosts = filteredPosts.length > 0;
 
     const sectionLabel = 'Content';
-    const currentViewLabelMap = {
-        feed: 'Feed',
-        calendar: 'Calendar',
-        grid: 'Grid',
-        list: 'List'
-    };
-    const currentViewLabel = currentViewLabelMap[currentView] || 'Feed';
+
+    const viewOptions = [
+        { id: 'feed', label: 'Feed', icon: Rss },
+        { id: 'calendar', label: 'Calendar', icon: CalendarDays },
+        { id: 'grid', label: 'Grid', icon: LayoutGrid },
+        { id: 'list', label: 'List', icon: List },
+    ];
+    const currentViewOption = viewOptions.find(v => v.id === currentView) || viewOptions[0];
 
     const loadFacebookPosts = (channelId) => {
         setIsLoadingPosts(true);
@@ -260,6 +259,16 @@ const Content = () => {
             }));
         }
 
+        const searchParam = params.get('search');
+        if (searchParam) {
+            setFilters(prev => ({
+                ...prev,
+                searchQuery: searchParam
+            }));
+        } else {
+            setFilters(prev => ({ ...prev, searchQuery: '' }));
+        }
+
         if (viewParam && ['feed', 'calendar', 'grid', 'list'].includes(viewParam)) {
             setCurrentView(viewParam);
         }
@@ -274,7 +283,6 @@ const Content = () => {
             setPosts(initialPosts);
         }
     }, [location.search]);
-    console.log(posts);
 
     const renderView = () => {
         switch (currentView) {
@@ -308,61 +316,81 @@ const Content = () => {
     // Compact header redesign — breadcrumb + view switcher + actions injected into Topbar
     const topbarContent = (
         <>
-            <span style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-main)' }}>
+            <span className="hide-on-tablet" style={{ fontSize: '0.82rem', fontWeight: 500, color: 'var(--text-main)' }}>
                 {sectionLabel}
             </span>
-            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 0.1rem' }}>/</span>
-            {/* View dropdown — Plannable-style */}
-            <div ref={viewDropdownRef} style={{ position: 'relative' }}>
-                <button
-                    onClick={() => setShowViewDropdown(!showViewDropdown)}
-                    style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '0.25rem',
-                        fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        padding: '2px 4px', borderRadius: 4,
-                        transition: 'background 0.15s'
-                    }}
-                >
-                    {currentViewLabel}
-                    <ChevronDown size={13} style={{
-                        color: 'var(--text-muted)',
-                        transition: 'transform 0.15s',
-                        transform: showViewDropdown ? 'rotate(180deg)' : 'rotate(0)'
-                    }} />
-                </button>
-                {showViewDropdown && (
-                    <div style={{
-                        position: 'absolute', top: 'calc(100% + 6px)', left: 0,
-                        background: 'white', border: '1px solid var(--input-border)',
-                        borderRadius: 8, padding: '0.35rem', minWidth: 160,
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100
-                    }}>
-                        {[
-                            { id: 'feed', label: 'Feed', icon: Rss },
-                            { id: 'calendar', label: 'Calendar', icon: CalendarDays },
-                            { id: 'grid', label: 'Grid', icon: LayoutGrid },
-                            { id: 'list', label: 'List', icon: List },
-                        ].map(v => (
+            <span className="hide-on-tablet" style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '0 4px' }}>/</span>
+
+            {/* View switcher — MUI Menu (renders via portal, never clipped) */}
+            <div style={{ flexShrink: 0 }}>
+                {(() => {
+                    const CurrentViewIcon = currentViewOption.icon; return (
+                        <Tooltip title="Change View">
                             <button
-                                key={v.id}
-                                onClick={() => { setCurrentView(v.id); setShowViewDropdown(false); }}
+                                onClick={(e) => setAnchorElView(e.currentTarget)}
                                 style={{
-                                    display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%',
-                                    padding: '7px 10px', borderRadius: 6,
-                                    border: 'none', cursor: 'pointer',
-                                    background: currentView === v.id ? 'rgba(99,102,241,0.08)' : 'transparent',
-                                    color: currentView === v.id ? 'var(--color-primary)' : 'var(--text-main)',
+                                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                    fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)',
+                                    background: 'none', border: '1px solid var(--input-border)',
+                                    borderRadius: 7, cursor: 'pointer',
+                                    padding: '4px 9px', transition: 'border-color 0.15s, background 0.15s',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-primary)'; e.currentTarget.style.background = 'rgba(99,102,241,0.04)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--input-border)'; e.currentTarget.style.background = 'none'; }}
+                            >
+                                <CurrentViewIcon size={13} style={{ color: 'var(--color-primary)' }} />
+                                <span className="hide-on-mobile">{currentViewOption.label}</span>
+                                <ChevronDown size={12} style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: Boolean(anchorElView) ? 'rotate(180deg)' : 'rotate(0)' }} />
+                            </button>
+                        </Tooltip>
+                    );
+                })()}
+                <Menu
+                    anchorEl={anchorElView}
+                    open={Boolean(anchorElView)}
+                    onClose={() => setAnchorElView(null)}
+                    PaperProps={{
+                        sx: {
+                            borderRadius: '10px',
+                            minWidth: 160,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                            mt: 0.5,
+                            '& .MuiMenuItem-root': {
+                                borderRadius: '6px',
+                                mx: 0.5,
+                                px: 1.5,
+                                py: 0.8,
+                                fontSize: '0.82rem',
+                                gap: 1,
+                            }
+                        }
+                    }}
+                    transformOrigin={{ horizontal: 'left', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'left', vertical: 'bottom' }}
+                >
+                    {viewOptions.map(v => {
+                        const VIcon = v.icon;
+                        return (
+                            <MenuItem
+                                key={v.id}
+                                selected={currentView === v.id}
+                                onClick={() => { setCurrentView(v.id); setAnchorElView(null); }}
+                                sx={{
                                     fontWeight: currentView === v.id ? 600 : 400,
-                                    fontSize: '0.8rem', transition: 'background 0.12s'
+                                    color: currentView === v.id ? 'var(--color-primary)' : 'var(--text-main)',
+                                    bgcolor: currentView === v.id ? 'rgba(99,102,241,0.08)' : 'transparent',
                                 }}
                             >
-                                <v.icon size={15} />
-                                {v.label}
-                            </button>
-                        ))}
-                    </div>
-                )}
+                                <ListItemIcon sx={{ minWidth: '28px !important', color: 'inherit' }}>
+                                    <VIcon size={15} />
+                                </ListItemIcon>
+                                <ListItemText primaryTypographyProps={{ fontSize: '0.82rem', fontWeight: 'inherit' }}>
+                                    {v.label}
+                                </ListItemText>
+                            </MenuItem>
+                        );
+                    })}
+                </Menu>
             </div>
 
             {/* Spacer */}
@@ -370,38 +398,55 @@ const Content = () => {
 
             {/* Actions — right side of topbar content area */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginRight: '12px' }}>
-                <FilterDropdown onFilterChange={handleFilterChange} />
-                <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => setIsMediaOpen(true)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}
-                >
-                    <Image size={15} /> <span className="hide-on-mobile">Media</span>
-                </button>
-                <button
-                    type="button"
-                    className="btn btn-ghost"
-                    onClick={() => setIsShareOpen(true)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}
-                >
-                    <Share2 size={15} /> <span className="hide-on-mobile">Share</span>
-                </button>
+                <Tooltip title="Filter Posts">
+                    <div>
+                        <FilterDropdown onFilterChange={handleFilterChange} />
+                    </div>
+                </Tooltip>
+
+                <Tooltip title="Media Gallery">
+                    <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => setIsMediaOpen(true)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}
+                    >
+                        <Image size={15} /> <span className="hide-on-tablet">Media</span>
+                    </button>
+                </Tooltip>
+
+                <Tooltip title="Share Progress">
+                    <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => setIsShareOpen(true)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}
+                    >
+                        <Share2 size={15} /> <span className="hide-on-tablet">Share</span>
+                    </button>
+                </Tooltip>
+
                 <div style={{ width: '1px', height: '24px', background: 'var(--input-border)', margin: '0 4px' }} />
-                <button
-                    type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => setIsModalOpen(true)}
-                    style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        padding: '0 6px',
-                        fontSize: '0.75rem'
-                    }}
-                >
-                    <PenSquare size={12} /> Compose
-                </button>
+
+                <Tooltip title="Create Post">
+                    <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setIsModalOpen(true)}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            padding: '0 8px',
+                            minWidth: '32px',
+                            height: '32px',
+                            justifyContent: 'center',
+                            fontSize: '0.75rem'
+                        }}
+                    >
+                        <PenSquare size={13} /> <span className="hide-on-tablet" style={{ marginLeft: '4px' }}>Compose</span>
+                    </button>
+                </Tooltip>
             </div>
         </>
     );
@@ -443,7 +488,7 @@ const Content = () => {
             <MediaLibraryModal isOpen={isMediaOpen} onClose={() => setIsMediaOpen(false)} />
             <ShareModal isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} />
 
-            {/* Post container width adjustment — content goes straight to stories/posts, no in-page header */}
+            {/* Content area */}
             {hasPosts ? (
                 <div style={{ padding: '0' }}>
                     {renderView()}

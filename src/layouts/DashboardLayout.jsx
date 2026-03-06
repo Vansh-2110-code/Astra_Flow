@@ -1,30 +1,76 @@
 
 import React, { useState } from 'react';
+import { Box, useMediaQuery, useTheme, Toolbar } from '@mui/material';
 import Sidebar from '../components/layout/Sidebar';
 import Topbar from '../components/layout/Topbar';
 
-// Compact header redesign — DashboardLayout now accepts optional topbarContent
-// to let pages inject breadcrumb + actions into the topbar area (Plannable-style)
+const DRAWER_WIDTH = 260;
+
 const DashboardLayout = ({ children, topbarContent }) => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const theme = useTheme();
+    const isMobile = useMediaQuery('(max-width:1024px)');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
+
+    const toggleSidebar = () => {
+        setIsSidebarOpen(!isSidebarOpen);
+    };
+
+    const handleSidebarClose = () => {
+        if (isMobile) {
+            setIsSidebarOpen(false);
+        }
+    };
 
     return (
-        <div className="dashboard-layout">
-            <Sidebar isOpen={isSidebarOpen} />
-            <div className="main-content">
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'var(--bg-main)' }}>
+            <Box
+                sx={{
+                    width: isMobile ? 0 : (isSidebarOpen ? DRAWER_WIDTH : 0),
+                    flexShrink: 0,
+                    transition: theme.transitions.create('width', {
+                        easing: theme.transitions.easing.sharp,
+                        duration: theme.transitions.duration.shorter,
+                    }),
+                    overflow: 'hidden'
+                }}
+            >
+                <Sidebar
+                    isOpen={isSidebarOpen}
+                    onClose={handleSidebarClose}
+                />
+            </Box>
+            <Box
+                component="main"
+                className="main-content"
+                sx={{
+                    flexGrow: 1,
+                    transition: theme.transitions.create(['margin', 'width'], {
+                        easing: theme.transitions.easing.sharp,
+                        duration: theme.transitions.duration.shorter,
+                    }),
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minWidth: 0,
+                    position: 'relative'
+                }}
+            >
                 <Topbar
-                    topbarContent={topbarContent}
                     isSidebarOpen={isSidebarOpen}
-                    toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                    toggleSidebar={toggleSidebar}
+                    drawerWidth={DRAWER_WIDTH}
                 >
                     {topbarContent}
                 </Topbar>
-                <main className="page-content">
+
+                <Toolbar sx={{ minHeight: 60 }} /> {/* Standard Offset Spacer */}
+
+                <Box className="page-content">
                     {children}
-                </main>
-            </div>
-        </div>
+                </Box>
+            </Box>
+        </Box>
     );
 };
 
 export default DashboardLayout;
+

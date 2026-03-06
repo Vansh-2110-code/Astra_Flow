@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useParams, useNavigate } from 'react-router-dom';
 import {
     FileText,
@@ -17,22 +17,48 @@ import {
     Youtube,
     MessageCircle,
     Globe,
-    ChevronDown,
-    Check,
-    LogOut
+    ChevronDown
 } from 'lucide-react';
-import { logout, getUserData } from '../../services/authService';
+import {
+    List,
+    ListItem,
+    Collapse,
+    Typography,
+    useMediaQuery,
+    useTheme,
+    Divider,
+    Box
+} from '@mui/material';
+import { getUserData } from '../../services/authService';
 import { getFacebookChannels } from '../../services/channelService';
+import {
+    StyledDrawer,
+    SidebarWrapper,
+    LogoWrapper,
+    LogoIcon,
+    LogoText,
+    NavItemButton,
+    NavIcon,
+    NavText,
+    SectionHeader,
+    AppItemButton,
+    AccountItemButton,
+    AccountNavIcon,
+    PresenceCount,
+    UserProfileButton,
+    UserProfileAvatar
+} from './Sidebar.styles';
 
-const Sidebar = ({ isOpen = true }) => {
+const Sidebar = ({ isOpen = true, onClose }) => {
     const { workspaceId } = useParams();
     const navigate = useNavigate();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
     const baseUrl = `/workspace/${workspaceId}`;
-    // Connected Apps: one dropdown; when open, scrollable list of apps (no Dashboard in nav).
     const [connectedAppsOpen, setConnectedAppsOpen] = useState(false);
     const [expandedApp, setExpandedApp] = useState(null);
     const [selectedAccounts, setSelectedAccounts] = useState({ 'Instagram': ['@main_account'], 'Facebook': ['@page1'], 'LinkedIn': ['@profile1'] });
-    const [showUserPopup, setShowUserPopup] = useState(false);
 
     const user = getUserData();
     const userName = user
@@ -46,7 +72,6 @@ const Sidebar = ({ isOpen = true }) => {
         .toUpperCase()
         .slice(0, 2);
 
-    // Dashboard removed from sidebar per request.
     const navItems = [
         { icon: FileText, label: 'Content', path: `${baseUrl}/content` },
         { icon: CheckSquare, label: 'Approvals', path: `${baseUrl}/approvals` },
@@ -56,7 +81,6 @@ const Sidebar = ({ isOpen = true }) => {
         { icon: Settings, label: 'Settings', path: `${baseUrl}/settings` },
     ];
 
-    // Connected Apps: Base static apps
     const baseConnectedApps = [
         { id: 'Instagram', icon: Instagram, name: 'Instagram', count: 2, color: '#E1306C', accounts: [{ handle: '@main_account' }, { handle: '@brand_account' }] },
         { id: 'LinkedIn', icon: Linkedin, name: 'LinkedIn', count: 1, color: '#0A66C2', accounts: [{ handle: '@profile1' }] },
@@ -70,17 +94,15 @@ const Sidebar = ({ isOpen = true }) => {
 
     const [connectedApps, setConnectedApps] = useState(baseConnectedApps);
 
-    // Fetch dynamic channels (Facebook)
-    React.useEffect(() => {
+    useEffect(() => {
         if (!workspaceId) return;
 
         getFacebookChannels(workspaceId)
             .then(data => {
                 if (data.channels && data.channels.length > 0) {
-                    // Map the backend channels to our UI accounts format
                     const fbAccounts = data.channels.map(ch => ({
-                        id: ch.id,           // We need the ID for API calls later
-                        handle: ch.name      // Display name from API
+                        id: ch.id,
+                        handle: ch.name
                     }));
 
                     const dynamicFb = {
@@ -92,12 +114,10 @@ const Sidebar = ({ isOpen = true }) => {
                         accounts: fbAccounts
                     };
 
-                    // Insert Facebook at index 1 to maintain relative position
                     const newApps = [...baseConnectedApps];
                     newApps.splice(1, 0, dynamicFb);
                     setConnectedApps(newApps);
                 } else {
-                    // If no FB channels, just ensure the static list is used (which has no FB now)
                     setConnectedApps(baseConnectedApps);
                 }
             })
@@ -107,199 +127,154 @@ const Sidebar = ({ isOpen = true }) => {
             });
     }, [workspaceId]);
 
-
-    const toggleAccountSelection = (platformId, handle) => {
-        setSelectedAccounts((prev) => {
-            const list = prev[platformId] || [];
-            const next = list.includes(handle) ? list.filter((h) => h !== handle) : [...list, handle];
-            return { ...prev, [platformId]: next };
-        });
-    };
-
-    // UI redesign inspired by Plannable
-    // Layout restructuring (non-breaking)
     const handleConnectedAccountClick = (appId, handle, accountId) => {
-        toggleAccountSelection(appId, handle);
+        const list = selectedAccounts[appId] || [];
+        const next = list.includes(handle) ? list.filter((h) => h !== handle) : [...list, handle];
+        setSelectedAccounts({ ...selectedAccounts, [appId]: next });
 
         if (!workspaceId) return;
 
         let view = 'feed';
         let platform = appId;
+        if (appId === 'LinkedIn') view = 'list';
 
-        if (appId === 'LinkedIn') {
-            view = 'list';
-        }
-
-        // Pass the channel ID if we have it (for Facebook)
         const params = new URLSearchParams();
         params.append('platform', platform);
         params.append('view', view);
-        if (accountId) {
-            params.append('channel_id', accountId);
-        }
+        if (accountId) params.append('channel_id', accountId);
 
-        navigate(`/workspace/${workspaceId}/content?${params.toString()}`);
+        navigate(`${baseUrl}/content?${params.toString()}`);
+        if (isMobile && onClose) onClose();
     };
 
-    return (
-        <aside className={`sidebar ${isOpen ? '' : 'collapsed'}`}>
-            <div className="sidebar-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-primary)' }}>
-                    <div style={{ padding: 5, background: 'var(--color-primary)', color: 'white', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem' }}>L</div>
-                    <span style={{ fontSize: '1rem' }}>LintCollab</span>
-                </div>
-            </div>
+    const drawerContent = (
+        <SidebarWrapper>
+            {/* Logo */}
+            <LogoWrapper>
+                <LogoIcon>L</LogoIcon>
+                <LogoText variant="h6">LintCollab</LogoText>
+            </LogoWrapper>
 
-            <nav style={{ flex: 1, overflowY: 'auto' }}>
+            {/* Navigation */}
+            <List sx={{ flex: 1, overflowY: 'auto', p: 0 }}>
                 {navItems.map((item) => (
-                    <NavLink
-                        key={item.path}
-                        to={item.path}
-                        className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                    >
-                        <item.icon size={16} style={{ flexShrink: 0 }} />
-                        <span>{item.label}</span>
-                    </NavLink>
-                ))}
-                {/* Connected Apps: after Settings; single dropdown with scrollable app list. */}
-                <div style={{ padding: '0.5rem 0', marginTop: '0.25rem' }}>
-                    <button
-                        type="button"
-                        className="nav-item"
-                        style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none', background: 'transparent', font: 'inherit', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', marginBottom: 0, fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                        onClick={() => setConnectedAppsOpen(!connectedAppsOpen)}
-                    >
-                        <span>Connected Apps</span>
-                        <ChevronDown size={12} style={{ transform: connectedAppsOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', marginLeft: 'auto' }} />
-                    </button>
-                    {connectedAppsOpen && (
-                        <div style={{ paddingRight: '0.25rem' }}>
-                            {connectedApps.map((app) => {
-                                const Icon = app.icon;
-                                const isExpanded = expandedApp === app.id;
-                                const selected = selectedAccounts[app.id] || [];
-                                return (
-                                    <div key={app.id} style={{ marginBottom: '0.2rem' }}>
-                                        <button
-                                            type="button"
-                                            className="nav-item"
-                                            style={{ width: '100%', textAlign: 'left', cursor: 'pointer', border: 'none', background: 'transparent', font: 'inherit', display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', marginBottom: 0, fontSize: '0.75rem' }}
-                                            onClick={() => setExpandedApp(isExpanded ? null : app.id)}
-                                        >
-                                            <Icon size={16} style={{ flexShrink: 0 }} />
-                                            <span style={{ flex: 1, fontSize: '0.75rem' }}>{app.name}</span>
-                                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '20px', height: '20px', padding: '0 4px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 600, background: 'rgba(0,0,0,0.06)', color: 'var(--text-muted)' }}>{app.count}</span>
-                                            <ChevronDown size={12} style={{ flexShrink: 0, transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                                        </button>
-                                        {isExpanded && (
-                                            <div style={{ paddingLeft: '0.75rem', paddingRight: '0.25rem', paddingBottom: '0.35rem', marginLeft: '1rem', marginTop: '0.15rem' }}>
-                                                {app.accounts.map((acc) => {
-                                                    const isSelected = selected.includes(acc.handle);
-                                                    return (
-                                                        <button
-                                                            key={acc.id || acc.handle}
-                                                            type="button"
-                                                            className={`app-nav-item ${isSelected ? 'active' : ''}`}
-                                                            style={{
-                                                                // Dynamically inject the brand color for the ::before pseudo-element vertical bar
-                                                                '--color-primary': app.color,
-                                                                fontSize: '0.7rem'
-                                                            }}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleConnectedAccountClick(app.id, acc.handle, acc.id);
-                                                            }}
-                                                        >
-                                                            {/* If active, use brand color. If inactive, CSS rules fallback to grey */}
-                                                            <Icon size={12} color={isSelected ? app.color : undefined} />
-                                                            <span style={{ flex: 1, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                                                                {acc.handle}
-                                                            </span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-            </nav>
-
-            {/* User section at bottom with popup */}
-            <div
-                style={{ marginTop: 'auto', padding: '0.75rem 0', position: 'relative' }}
-                onMouseEnter={() => setShowUserPopup(true)}
-                onMouseLeave={() => setShowUserPopup(false)}
-            >
-                {/* User popup — appears above the avatar card */}
-                {showUserPopup && (
-                    <div className="dropdown-menu-premium" style={{
-                        position: 'absolute',
-                        bottom: '100%',
-                        left: '0.5rem',
-                        right: '0.5rem',
-                        marginBottom: '0.25rem',
-                        padding: '0.85rem',
-                    }}>
-                        {/* Invisible bridge to prevent mouseleave during transition */}
-                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, height: '0.5rem', background: 'transparent' }} />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.65rem' }}>
-                            <div style={{
-                                width: 36, height: 36, borderRadius: '50%',
-                                background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: 'white', fontSize: '0.75rem', fontWeight: 600, flexShrink: 0,
-                            }}>
-                                {userInitials}
-                            </div>
-                            <div style={{ overflow: 'hidden' }}>
-                                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    {userName}
-                                </div>
-                                {userEmail && (
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {userEmail}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div style={{ height: 1, background: 'var(--input-border)', margin: '0.25rem 0 0.5rem' }} />
-                        <button
-                            onClick={logout}
-                            className="dropdown-item-premium"
-                            style={{ color: '#ef4444' }}
+                    <ListItem key={item.path} disablePadding>
+                        <NavItemButton
+                            component={NavLink}
+                            to={item.path}
+                            onClick={() => isMobile && onClose && onClose()}
                         >
-                            <LogOut size={15} />
-                            Log Out
-                        </button>
-                    </div>
-                )}
+                            <NavIcon>
+                                <item.icon size={16} />
+                            </NavIcon>
+                            <NavText primary={item.label} />
+                        </NavItemButton>
+                    </ListItem>
+                ))}
 
-                {/* User card trigger */}
-                <div
-                    className="nav-item"
-                    style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', cursor: 'pointer' }}
-                >
-                    <div className="avatar avatar-sm" style={{
-                        background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: 'white', fontSize: '0.7rem', fontWeight: 600,
-                    }}>
-                        {userInitials}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 500 }}>{userName}</span>
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                            {userEmail ? userEmail : 'Member'}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </aside>
+                {/* Connected Apps Section */}
+                <Box sx={{ mt: 1 }}>
+                    <NavItemButton
+                        onClick={() => setConnectedAppsOpen(!connectedAppsOpen)}
+                        sx={{ '&:hover': { bgcolor: 'transparent' } }}
+                    >
+                        <SectionHeader component="span">CONNECTED APPS</SectionHeader>
+                        <ChevronDown
+                            size={12}
+                            style={{
+                                transform: connectedAppsOpen ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.2s',
+                                color: 'var(--text-muted)'
+                            }}
+                        />
+                    </NavItemButton>
+
+                    <Collapse in={connectedAppsOpen}>
+                        <List disablePadding>
+                            {connectedApps.map((app) => (
+                                <Box key={app.id}>
+                                    <AppItemButton
+                                        onClick={() => setExpandedApp(expandedApp === app.id ? null : app.id)}
+                                    >
+                                        <NavIcon>
+                                            <app.icon size={16} />
+                                        </NavIcon>
+                                        <NavText
+                                            primary={app.name}
+                                            primaryTypographyProps={{ fontSize: '0.75rem', fontWeight: 500 }}
+                                        />
+                                        <PresenceCount>{app.count}</PresenceCount>
+                                        <ChevronDown
+                                            size={12}
+                                            style={{
+                                                transform: expandedApp === app.id ? 'rotate(180deg)' : 'none',
+                                                transition: 'transform 0.2s'
+                                            }}
+                                        />
+                                    </AppItemButton>
+
+                                    <Collapse in={expandedApp === app.id}>
+                                        <List disablePadding sx={{ ml: 2, mr: 0.5 }}>
+                                            {app.accounts.map((acc) => {
+                                                const isSelected = (selectedAccounts[app.id] || []).includes(acc.handle);
+                                                return (
+                                                    <AccountItemButton
+                                                        key={acc.id || acc.handle}
+                                                        isSelected={isSelected}
+                                                        brandColor={app.color}
+                                                        onClick={() => handleConnectedAccountClick(app.id, acc.handle, acc.id)}
+                                                    >
+                                                        <AccountNavIcon isSelected={isSelected} brandColor={app.color}>
+                                                            <app.icon size={12} />
+                                                        </AccountNavIcon>
+                                                        <NavText
+                                                            primary={acc.handle}
+                                                            primaryTypographyProps={{
+                                                                fontSize: '0.7rem',
+                                                                fontWeight: 'inherit',
+                                                                noWrap: true
+                                                            }}
+                                                        />
+                                                    </AccountItemButton>
+                                                );
+                                            })}
+                                        </List>
+                                    </Collapse>
+                                </Box>
+                            ))}
+                        </List>
+                    </Collapse>
+                </Box>
+            </List>
+
+            {/* User Profile */}
+            <Divider sx={{ my: 1 }} />
+            <Box sx={{ pt: 1 }}>
+                <UserProfileButton>
+                    <UserProfileAvatar>{userInitials}</UserProfileAvatar>
+                    <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 600, noWrap: true }}>
+                            {userName}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'var(--text-muted)', display: 'block', noWrap: true }}>
+                            {userEmail || 'Member'}
+                        </Typography>
+                    </Box>
+                </UserProfileButton>
+            </Box>
+        </SidebarWrapper>
+    );
+
+    return (
+        <StyledDrawer
+            variant={isMobile ? 'temporary' : 'persistent'}
+            open={isOpen}
+            onClose={onClose}
+        >
+            {drawerContent}
+        </StyledDrawer>
     );
 };
 
 export default Sidebar;
+

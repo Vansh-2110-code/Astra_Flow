@@ -3,6 +3,7 @@ import Card from './ui/Card';
 import Badge from './ui/Badge';
 import Button from './ui/Button';
 import { MoreHorizontal, MessageSquare, Heart, CheckCircle, Plus, Check, Smile, Reply, Pencil, Trash2, Send, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMediaQuery, useTheme } from '@mui/material';
 import { getAspectRatioStyles } from '../utils/mediaRules';
 
 const PostMedia = ({ post, isMinimized }) => {
@@ -137,6 +138,8 @@ const PostCard = ({
     currentUserRole = 'admin',
     isMinimized = false
 }) => {
+    const theme = useTheme();
+    const isMobile = useMediaQuery('(max-width:1024px)');
     const Icon = post.icon;
     const isApproved = post.approved || (post.approvedBy && post.approvedBy.length > 0);
     const hasUserApproved = post.approvedBy?.includes(currentUser);
@@ -415,88 +418,92 @@ const PostCard = ({
                 zIndex: (selectionState || showCommentInput) ? 50 : 1
             }}
         >
-            {/* Approval dot */}
-            <div
-                onClick={handleApprove}
-                onMouseEnter={() => setShowApproverPopup(true)}
-                onMouseLeave={() => setShowApproverPopup(false)}
-                title={hasUserApproved ? 'Approved' : canApprove ? 'Click to approve' : undefined}
-                style={{
-                    position: 'absolute',
-                    top: '16px',
-                    left: isMinimized ? '-44px' : '0',
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    border: 'none',
-                    background: hasUserApproved ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)' : 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: canApprove ? 'pointer' : 'default',
-                    transition: 'transform 0.2s ease, box-shadow 0.2s',
-                    zIndex: 10,
-                    boxShadow: hasUserApproved
-                        ? '0 4px 10px rgba(34, 197, 94, 0.4)'
-                        : '0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.04)',
-                    transform: showApproverPopup && canApprove && !hasUserApproved ? 'scale(1.06)' : 'scale(1)'
-                }}
-            >
-                <Check
-                    size={18}
-                    color={hasUserApproved ? 'white' : '#9ca3af'}
-                    strokeWidth={hasUserApproved ? 3 : 2}
-                />
-            </div>
-
-            {/* Platform icon circle */}
-            <div style={{ position: 'absolute', top: '60px', left: isMinimized ? '-44px' : '0', width: '36px', height: '36px', zIndex: showPlatformMenu ? 101 : 10 }}>
-                <style>{`
-                    @keyframes spinArc { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                    @keyframes platformPulse {
-                        0%, 100% { box-shadow: 0 0 0 0 rgba(200,80,120,0.5); }
-                        50% { box-shadow: 0 0 0 8px rgba(200,80,120,0); }
-                    }
-                    @keyframes publishDone {
-                        0% { transform: scale(1); }
-                        40% { transform: scale(1.15); }
-                        70% { transform: scale(0.95); }
-                        100% { transform: scale(1); }
-                    }
-                `}</style>
-
-                {/* Spinning SVG arc */}
-                {isPublishing && (
-                    <svg width="44" height="44" style={{ position: 'absolute', top: '-4px', left: '-4px', animation: 'spinArc 1s linear infinite', zIndex: 12, pointerEvents: 'none' }}>
-                        <circle cx="22" cy="22" r="20" fill="none" stroke={post.platform === 'Instagram' ? '#e6683c' : platformColor} strokeWidth="2.5" strokeLinecap="round"
-                            strokeDasharray="90 36" />
-                    </svg>
-                )}
-
+            {/* Approval dot - hidden on mobile if bar is shown */}
+            {!isMobile && (
                 <div
+                    onClick={handleApprove}
+                    onMouseEnter={() => setShowApproverPopup(true)}
+                    onMouseLeave={() => setShowApproverPopup(false)}
+                    title={hasUserApproved ? 'Approved' : canApprove ? 'Click to approve' : undefined}
                     style={{
+                        position: 'absolute',
+                        top: '16px',
+                        left: isMinimized ? '-44px' : '0',
                         width: '36px',
                         height: '36px',
                         borderRadius: '50%',
-                        background: isPublishing || publishDone || isPublished ? platformColor : showPlatformMenu ? '#f3f4f6' : 'white',
+                        border: 'none',
+                        background: hasUserApproved ? 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)' : 'white',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: isPublishing ? `0 4px 16px rgba(0,0,0,0.2)` : isPublished ? `0 4px 12px rgba(0,0,0,0.15)` : '0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.04)',
-                        color: isPublishing || publishDone || isPublished ? 'white' : '#374151',
-                        cursor: isPublishing ? 'default' : 'pointer',
-                        transition: 'background 0.4s ease, box-shadow 0.3s ease, color 0.3s ease',
-                        animation: isPublishing ? 'platformPulse 1.5s ease-in-out infinite' : publishDone ? 'publishDone 0.5s ease' : 'none',
-                        position: 'relative',
-                        zIndex: 11
+                        cursor: canApprove ? 'pointer' : 'default',
+                        transition: 'transform 0.2s ease, box-shadow 0.2s',
+                        zIndex: 10,
+                        boxShadow: hasUserApproved
+                            ? '0 4px 10px rgba(34, 197, 94, 0.4)'
+                            : '0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.04)',
+                        transform: showApproverPopup && canApprove && !hasUserApproved ? 'scale(1.06)' : 'scale(1)'
                     }}
-                    onMouseEnter={() => !showPlatformMenu && !isPublishing && setShowPlatformPopup(true)}
-                    onMouseLeave={() => setShowPlatformPopup(false)}
-                    onClick={() => { if (!isPublishing) { setShowPlatformMenu(!showPlatformMenu); setShowPlatformPopup(false); } }}
                 >
-                    {publishDone ? <Check size={16} strokeWidth={3} /> : Icon && <Icon size={16} />}
+                    <Check
+                        size={18}
+                        color={hasUserApproved ? 'white' : '#9ca3af'}
+                        strokeWidth={hasUserApproved ? 3 : 2}
+                    />
                 </div>
-            </div>
+            )}
+
+            {/* Platform icon circle - hidden on mobile if bar is shown */}
+            {!isMobile && (
+                <div style={{ position: 'absolute', top: '60px', left: isMinimized ? '-44px' : '0', width: '36px', height: '36px', zIndex: showPlatformMenu ? 101 : 10 }}>
+                    <style>{`
+                        @keyframes spinArc { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                        @keyframes platformPulse {
+                            0%, 100% { box-shadow: 0 0 0 0 rgba(200,80,120,0.5); }
+                            50% { box-shadow: 0 0 0 8px rgba(200,80,120,0); }
+                        }
+                        @keyframes publishDone {
+                            0% { transform: scale(1); }
+                            40% { transform: scale(1.15); }
+                            70% { transform: scale(0.95); }
+                            100% { transform: scale(1); }
+                        }
+                    `}</style>
+
+                    {/* Spinning SVG arc */}
+                    {isPublishing && (
+                        <svg width="44" height="44" style={{ position: 'absolute', top: '-4px', left: '-4px', animation: 'spinArc 1s linear infinite', zIndex: 12, pointerEvents: 'none' }}>
+                            <circle cx="22" cy="22" r="20" fill="none" stroke={post.platform === 'Instagram' ? '#e6683c' : platformColor} strokeWidth="2.5" strokeLinecap="round"
+                                strokeDasharray="90 36" />
+                        </svg>
+                    )}
+
+                    <div
+                        style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            background: isPublishing || publishDone || isPublished ? platformColor : showPlatformMenu ? '#f3f4f6' : 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: isPublishing ? `0 4px 16px rgba(0,0,0,0.2)` : isPublished ? `0 4px 12px rgba(0,0,0,0.15)` : '0 2px 8px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.04)',
+                            color: isPublishing || publishDone || isPublished ? 'white' : '#374151',
+                            cursor: isPublishing ? 'default' : 'pointer',
+                            transition: 'background 0.4s ease, box-shadow 0.3s ease, color 0.3s ease',
+                            animation: isPublishing ? 'platformPulse 1.5s ease-in-out infinite' : publishDone ? 'publishDone 0.5s ease' : 'none',
+                            position: 'relative',
+                            zIndex: 11
+                        }}
+                        onMouseEnter={() => !showPlatformMenu && !isPublishing && setShowPlatformPopup(true)}
+                        onMouseLeave={() => setShowPlatformPopup(false)}
+                        onClick={() => { if (!isPublishing) { setShowPlatformMenu(!showPlatformMenu); setShowPlatformPopup(false); } }}
+                    >
+                        {publishDone ? <Check size={16} strokeWidth={3} /> : Icon && <Icon size={16} />}
+                    </div>
+                </div>
+            )}
 
             {/* Animated platform action menu */}
             {showPlatformMenu && (
@@ -726,6 +733,68 @@ const PostCard = ({
                 {/* Post media */}
                 {post.platform !== 'Instagram' && post.media && (
                     <PostMedia post={post} isMinimized={isMinimized} />
+                )}
+
+                {/* New Responsive Action Bar (only on smaller screens) */}
+                {isMobile && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-around',
+                        padding: '10px 0',
+                        margin: '8px 0',
+                        borderTop: '1px solid var(--input-border)',
+                        borderBottom: '1px solid var(--input-border)',
+                        background: 'transparent'
+                    }}>
+                        {/* Approval Action */}
+                        <div
+                            onClick={handleApprove}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                cursor: canApprove ? 'pointer' : 'default',
+                                color: hasUserApproved ? '#22c55e' : 'var(--text-main)',
+                                transition: 'all 0.2s',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            <Check size={18} strokeWidth={hasUserApproved ? 3 : 2} />
+                        </div>
+
+                        <div style={{ width: '1px', height: '20px', background: 'rgba(0,0,0,0.06)' }} />
+
+                        {/* Comment Count Action */}
+                        <div
+                            onClick={(e) => { e.stopPropagation(); if (onOpenComments) onOpenComments(post); }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                cursor: 'pointer',
+                                color: 'var(--text-main)',
+                                fontSize: '0.85rem'
+                            }}
+                        >
+                            <MessageSquare size={18} />
+                            <span>Comment {post.comments?.length || 0}</span>
+                        </div>
+
+                        <div style={{ width: '1px', height: '20px', background: 'rgba(0,0,0,0.06)' }} />
+
+                        {/* Status Action */}
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            color: post.status === 'Published' ? '#3b82f6' : 'var(--text-main)',
+                            fontSize: '0.85rem'
+                        }}>
+                            {post.status === 'Published' ? <Send size={16} /> : <Clock size={16} />}
+                            <span>{post.status}</span>
+                        </div>
+                    </div>
                 )}
 
                 {/* Universal popover rendering safely attached to Card limits */}

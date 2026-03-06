@@ -93,7 +93,7 @@ const WorkspaceSelection = () => {
             />
 
             {/* Reuse the existing themed Topbar (has search + notifications + user menu) */}
-            <div className="main-content">
+            <div className="main-content" style={{ paddingTop: '60px' }}>
                 <Topbar />
 
                 <main className="page-content" style={{ maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
