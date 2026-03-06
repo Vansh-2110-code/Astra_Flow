@@ -14,7 +14,7 @@ import CalendarView from '../components/views/CalendarView';
 import GridView from '../components/views/GridView';
 import ListView from '../components/views/ListView';
 import { Plus, Image, Share2, PenSquare, Facebook, ChevronDown, Rss, CalendarDays, LayoutGrid, List } from 'lucide-react';
-import { Tooltip, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, useMediaQuery } from '@mui/material';
 import { posts as initialPosts } from '../data/mockData';
 import { useNotifications } from '../contexts/NotificationContext';
 import MediaLibraryModal from '../components/MediaLibraryModal';
@@ -47,6 +47,26 @@ const Content = () => {
         notifyNewPost
     } = useNotifications();
 
+    const isMobile = useMediaQuery('(max-width:1250px)');
+
+    // Close side panels automatically when resizing down to mobile
+    useEffect(() => {
+        if (isMobile) {
+            setIsPanelOpen(false);
+            setIsCommentsPanelOpen(false);
+            setSelectedPost(null);
+        }
+    }, [isMobile]);
+
+    // Ensure selectedPost is always perfectly visually synced with the master posts array
+    useEffect(() => {
+        if (selectedPost) {
+            const upToDatePost = posts.find(p => p.id === selectedPost.id);
+            if (upToDatePost && upToDatePost !== selectedPost) {
+                setSelectedPost(upToDatePost);
+            }
+        }
+    }, [posts]);
 
     // Check for scheduled posts needing approval on mount and periodically
     useEffect(() => {
@@ -305,6 +325,7 @@ const Content = () => {
                     onOpenComments={handleOpenComments}
                     onAddComment={handleAddComment}
                     showStoriesStrip={true}
+                    isPanelOpen={isCommentsPanelOpen}
                     onOpenNewStory={() => {
                         setInitialModalTab('Story');
                         setIsModalOpen(true);

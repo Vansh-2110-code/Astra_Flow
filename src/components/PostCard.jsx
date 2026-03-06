@@ -136,10 +136,11 @@ const PostCard = ({
     onAddComment,
     currentUser = 'Current User',
     currentUserRole = 'admin',
-    isMinimized = false
+    isMinimized = false,
+    isPanelOpen = false
 }) => {
     const theme = useTheme();
-    const isMobile = useMediaQuery('(max-width:1024px)');
+    const isMobile = useMediaQuery('(max-width:1250px)');
     const Icon = post.icon;
     const isApproved = post.approved || (post.approvedBy && post.approvedBy.length > 0);
     const hasUserApproved = post.approvedBy?.includes(currentUser);
@@ -342,7 +343,9 @@ const PostCard = ({
             try {
                 const selection = window.getSelection();
                 if (selection) selection.removeAllRanges();
-            } catch (err) { }
+            } catch {
+                // Ignore selection clear errors
+            }
         }, 50);
     };
 
@@ -409,6 +412,91 @@ const PostCard = ({
         return parts;
     };
 
+    const renderCommentItem = (comment, index) => {
+        const commentKey = comment.id || index;
+        if (deletedComments.has(commentKey)) return null;
+        const isResolved = resolvedComments.has(commentKey);
+        const textToShow = editedTexts[commentKey] || comment.text;
+        const commentReactions = reactions[commentKey] || [];
+
+        return (
+            <div key={commentKey} style={{ background: isResolved ? '#f9fafb' : 'white', opacity: isResolved ? 0.7 : 1, border: '1px solid #f3f4f6', borderRadius: '8px', padding: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '9px', fontWeight: 600 }}>
+                            {comment.author.charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-main)', textDecoration: isResolved ? 'line-through' : 'none' }}>
+                            {comment.author === currentUser || comment.author === 'Admin' ? 'You' : comment.author}
+                        </span>
+                        <span style={{ color: '#9ca3af', fontSize: '0.7rem' }}>· {new Date(comment.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#9ca3af', position: 'relative' }}>
+                        <div style={{ position: 'relative' }}>
+                            <button onClick={() => { setActiveEmojiPicker(activeEmojiPicker === commentKey ? null : commentKey); setActiveCommentMenu(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: 'inherit' }} title="Reaction"><Smile size={14} /></button>
+
+                            {activeEmojiPicker === commentKey && (
+                                <div style={{ position: 'absolute', top: '100%', right: '50%', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '6px', display: 'flex', flexWrap: 'wrap', width: '150px', gap: '6px', zIndex: 60, marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                                    {['👍', '❤️', '😂', '😮', '😢', '👏', '🔥', '🎉', '😡', '💯', '🤔', '🙌'].map(emoji => (
+                                        <span key={emoji} style={{ cursor: 'pointer', fontSize: '1rem', transition: 'transform 0.1s', padding: '2px' }} onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'} onMouseLeave={(e) => e.target.style.transform = 'scale(1)'} onClick={() => {
+                                            setReactions(prev => {
+                                                const list = prev[commentKey] || [];
+                                                if (list.includes(emoji)) {
+                                                    return { ...prev, [commentKey]: list.filter(e => e !== emoji) };
+                                                }
+                                                return { ...prev, [commentKey]: [...list, emoji] };
+                                            });
+                                            setActiveEmojiPicker(null);
+                                        }}>{emoji}</span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        <button onClick={() => setResolvedComments(prev => { const n = new Set(prev); if (n.has(commentKey)) n.delete(commentKey); else n.add(commentKey); return n; })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: isResolved ? '#10b981' : 'inherit' }} title="Resolve"><CheckCircle size={14} /></button>
+                        <button onClick={() => { setCommentText(`@${comment.author} `); if (inputRef.current) inputRef.current.focus(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: 'inherit' }} title="Reply"><Reply size={14} /></button>
+                        <button onClick={() => { setActiveCommentMenu(activeCommentMenu === commentKey ? null : commentKey); setActiveEmojiPicker(null); }} style={{ background: '#f3f4f6', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', display: 'flex', color: 'inherit' }}><MoreHorizontal size={14} /></button>
+
+                        {activeCommentMenu === commentKey && (
+                            <div style={{ position: 'absolute', top: '100%', right: 0, background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '4px 0', minWidth: '100px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50, marginTop: '4px' }}>
+                                <button onClick={() => { setCommentText(textToShow); setEditingComment(commentKey); setActiveCommentMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-main)', textAlign: 'left' }}>
+                                    <Pencil size={12} /> Edit
+                                </button>
+                                <button onClick={() => { setDeletedComments(prev => new Set(prev).add(commentKey)); setActiveCommentMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: '#ef4444', textAlign: 'left' }}>
+                                    <Trash2 size={12} /> Delete
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                {comment.selection && (
+                    <div style={{ borderLeft: '3px solid #fbbf24', paddingLeft: '8px', marginBottom: '6px' }}>
+                        <div style={{ background: '#fef3c7', padding: '2px 6px', fontSize: '0.75rem', display: 'inline-block', color: '#92400e', borderRadius: '4px', fontWeight: 500 }}>
+                            {comment.selection.text}
+                        </div>
+                    </div>
+                )}
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-main)', textDecoration: isResolved ? 'line-through' : 'none' }}>
+                    {textToShow} {editedTexts[commentKey] && <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>(edited)</span>}
+                </div>
+
+                {commentReactions.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                        {commentReactions.map((emoji, i) => (
+                            <div key={i} onClick={() => {
+                                setReactions(prev => {
+                                    const list = prev[commentKey] || [];
+                                    return { ...prev, [commentKey]: list.filter(e => e !== emoji) };
+                                });
+                            }} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#1d4ed8', cursor: 'pointer', transition: 'background 0.2s' }}>
+                                {emoji} 1
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     return (
         <div
             className={`post-card ${isMinimized ? 'minimized' : ''}`}
@@ -418,8 +506,8 @@ const PostCard = ({
                 zIndex: (selectionState || showCommentInput) ? 50 : 1
             }}
         >
-            {/* Approval dot - hidden on mobile if bar is shown */}
-            {!isMobile && (
+            {/* Approval dot - hidden if panel open or mobile */}
+            {(!isMobile && !isPanelOpen) && (
                 <div
                     onClick={handleApprove}
                     onMouseEnter={() => setShowApproverPopup(true)}
@@ -454,8 +542,8 @@ const PostCard = ({
                 </div>
             )}
 
-            {/* Platform icon circle - hidden on mobile if bar is shown */}
-            {!isMobile && (
+            {/* Platform icon circle - hidden if panel open or mobile */}
+            {(!isMobile && !isPanelOpen) && (
                 <div style={{ position: 'absolute', top: '60px', left: isMinimized ? '-44px' : '0', width: '36px', height: '36px', zIndex: showPlatformMenu ? 101 : 10 }}>
                     <style>{`
                         @keyframes spinArc { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -735,8 +823,8 @@ const PostCard = ({
                     <PostMedia post={post} isMinimized={isMinimized} />
                 )}
 
-                {/* New Responsive Action Bar (only on smaller screens) */}
-                {isMobile && (
+                {/* New Responsive Action Bar (shows on smaller screens or when side panel is open) */}
+                {(isMobile || isPanelOpen) && (
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -844,7 +932,7 @@ const PostCard = ({
 
                 {showCommentInput && selectionState && (
                     <div
-                        className="comment-popover-box"
+                        className="comment-popover"
                         style={{
                             position: 'absolute',
                             top: selectionState.top,
@@ -927,7 +1015,11 @@ const PostCard = ({
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={handleSubmitComment}
+                                    onMouseDown={(e) => {
+                                        e.preventDefault(); // Prevent input blur
+                                        e.stopPropagation();
+                                        handleSubmitComment(e);
+                                    }}
                                     disabled={!commentText.trim()}
                                     style={{
                                         background: 'none', border: 'none',
@@ -945,7 +1037,7 @@ const PostCard = ({
             </Card>
 
             {/* Inline floating comments box on the right side */}
-            {post.comments !== undefined && (
+            {post.comments !== undefined && !isMobile && !isPanelOpen && (
                 <div style={{
                     position: 'absolute',
                     top: '0',
@@ -1002,96 +1094,27 @@ const PostCard = ({
 
                     {/* Comments List */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {post.comments.map((comment, index) => {
-                            if (deletedComments.has(index)) return null;
-                            const isResolved = resolvedComments.has(index);
-                            const textToShow = editedTexts[index] || comment.text;
-                            const commentReactions = reactions[index] || [];
-
-                            return (
-                                <div key={index} style={{ background: isResolved ? '#f9fafb' : 'white', opacity: isResolved ? 0.7 : 1, border: '1px solid #f3f4f6', borderRadius: '8px', padding: '10px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '9px', fontWeight: 600 }}>
-                                                {comment.author.charAt(0).toUpperCase()}
-                                            </div>
-                                            <span style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-main)', textDecoration: isResolved ? 'line-through' : 'none' }}>
-                                                {comment.author === currentUser || comment.author === 'Admin' ? 'You' : comment.author}
-                                            </span>
-                                            <span style={{ color: '#9ca3af', fontSize: '0.7rem' }}>· {new Date(comment.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#9ca3af', position: 'relative' }}>
-                                            <div style={{ position: 'relative' }}>
-                                                <button onClick={() => { setActiveEmojiPicker(activeEmojiPicker === index ? null : index); setActiveCommentMenu(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: 'inherit' }} title="Reaction"><Smile size={14} /></button>
-
-                                                {activeEmojiPicker === index && (
-                                                    <div style={{ position: 'absolute', top: '100%', right: '50%', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '6px', display: 'flex', flexWrap: 'wrap', width: '150px', gap: '6px', zIndex: 60, marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                                                        {['👍', '❤️', '😂', '😮', '😢', '👏', '🔥', '🎉', '😡', '💯', '🤔', '🙌'].map(emoji => (
-                                                            <span key={emoji} style={{ cursor: 'pointer', fontSize: '1rem', transition: 'transform 0.1s', padding: '2px' }} onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'} onMouseLeave={(e) => e.target.style.transform = 'scale(1)'} onClick={() => {
-                                                                setReactions(prev => {
-                                                                    const list = prev[index] || [];
-                                                                    if (list.includes(emoji)) {
-                                                                        return { ...prev, [index]: list.filter(e => e !== emoji) };
-                                                                    }
-                                                                    return { ...prev, [index]: [...list, emoji] };
-                                                                });
-                                                                setActiveEmojiPicker(null);
-                                                            }}>{emoji}</span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <button onClick={() => setResolvedComments(prev => { const n = new Set(prev); if (n.has(index)) n.delete(index); else n.add(index); return n; })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: isResolved ? '#10b981' : 'inherit' }} title="Resolve"><CheckCircle size={14} /></button>
-                                            <button onClick={() => { setCommentText(`@${comment.author} `); if (inputRef.current) inputRef.current.focus(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: 'inherit' }} title="Reply"><Reply size={14} /></button>
-                                            <button onClick={() => { setActiveCommentMenu(activeCommentMenu === index ? null : index); setActiveEmojiPicker(null); }} style={{ background: '#f3f4f6', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', display: 'flex', color: 'inherit' }}><MoreHorizontal size={14} /></button>
-
-                                            {activeCommentMenu === index && (
-                                                <div style={{ position: 'absolute', top: '100%', right: 0, background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '4px 0', minWidth: '100px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50, marginTop: '4px' }}>
-                                                    <button onClick={() => { setCommentText(textToShow); setEditingComment(index); setActiveCommentMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-main)', textAlign: 'left' }}>
-                                                        <Pencil size={12} /> Edit
-                                                    </button>
-                                                    <button onClick={() => { setDeletedComments(prev => new Set(prev).add(index)); setActiveCommentMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: '#ef4444', textAlign: 'left' }}>
-                                                        <Trash2 size={12} /> Delete
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {
-                                        comment.selection && (
-                                            <div style={{ borderLeft: '3px solid #fbbf24', paddingLeft: '8px', marginBottom: '6px' }}>
-                                                <div style={{ background: '#fef3c7', padding: '2px 6px', fontSize: '0.75rem', display: 'inline-block', color: '#92400e', borderRadius: '4px', fontWeight: 500 }}>
-                                                    {comment.selection.text}
-                                                </div>
-                                            </div>
-                                        )
-                                    }
-                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-main)', textDecoration: isResolved ? 'line-through' : 'none' }}>
-                                        {textToShow} {editedTexts[index] && <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>(edited)</span>}
-                                    </div>
-
-                                    {commentReactions.length > 0 && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                                            {commentReactions.map((emoji, i) => (
-                                                <div key={i} onClick={() => {
-                                                    setReactions(prev => {
-                                                        const list = prev[index] || [];
-                                                        return { ...prev, [index]: list.filter(e => e !== emoji) };
-                                                    });
-                                                }} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#1d4ed8', cursor: 'pointer', transition: 'background 0.2s' }}>
-                                                    {emoji} 1
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        {post.comments.map(renderCommentItem)}
                     </div>
                 </div>
-            )
-            }
-        </div >
+            )}
+
+            {/* Mobile / Panel-Open Inline Comments List */}
+            {(isMobile || isPanelOpen) && post.comments && post.comments.length > 0 && (
+                <div style={{
+                    marginTop: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    padding: '0 4px'
+                }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
+                        Comments
+                    </div>
+                    {post.comments.map(renderCommentItem)}
+                </div>
+            )}
+        </div>
     );
 };
 

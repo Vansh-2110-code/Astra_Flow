@@ -2,7 +2,7 @@ import React from 'react';
 import PostCard from '../PostCard';
 import StoryStrip from '../StoryStrip';
 
-const FeedView = ({ posts, onApprove, onOpenComments, onAddComment, currentUser, showStoriesStrip = false, onOpenNewStory }) => {
+const FeedView = ({ posts, onApprove, onOpenComments, onAddComment, currentUser, showStoriesStrip = false, onOpenNewStory, isPanelOpen }) => {
     const storyPosts = showStoriesStrip ? posts.slice(0, 5) : [];
 
     return (
@@ -21,6 +21,7 @@ const FeedView = ({ posts, onApprove, onOpenComments, onAddComment, currentUser,
                     onOpenComments={onOpenComments}
                     onAddComment={onAddComment}
                     isMinimized={true}
+                    isPanelOpen={isPanelOpen}
                 />
             ))}
         </div>
