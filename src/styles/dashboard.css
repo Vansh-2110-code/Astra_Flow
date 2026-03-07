@@ -179,7 +179,7 @@
 
 /* Feed View — Post container width adjustment for centered SaaS layout */
 .feed-container {
-    max-width: 840px;
+    max-width: 935px;
     margin: 0 auto;
 }
 
@@ -215,9 +215,9 @@
 /* Consolidated Feed View - High Quality "Minimized" Standard */
 .post-card.minimized {
     transform: scale(0.95);
-    transform-origin: top center;
+    transform-origin: top left;
     width: 620px;
-    margin: 0 auto;
+    margin-right: auto;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

@@ -3,7 +3,7 @@ import Card from './ui/Card';
 import Badge from './ui/Badge';
 import Button from './ui/Button';
 import { MoreHorizontal, MessageSquare, Heart, CheckCircle, Plus, Check, Smile, Reply, Pencil, Trash2, Send, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useMediaQuery, useTheme } from '@mui/material';
+import { Avatar, Tooltip, IconButton, Paper, Fade, Collapse, Chip, Typography, Box, Divider, Zoom, TextField, Button as MuiButton, Badge as MuiBadge, Popover } from '@mui/material';
 import { getAspectRatioStyles } from '../utils/mediaRules';
 
 const PostMedia = ({ post, isMinimized }) => {
@@ -139,14 +139,33 @@ const PostCard = ({
     isMinimized = false,
     isPanelOpen = false
 }) => {
-    const theme = useTheme();
-    const isMobile = useMediaQuery('(max-width:1250px)');
     const Icon = post.icon;
-    const isApproved = post.approved || (post.approvedBy && post.approvedBy.length > 0);
     const hasUserApproved = post.approvedBy?.includes(currentUser);
     const approvedBy = post.approvedBy || [];
     const canApprove = ['admin', 'approver'].includes(currentUserRole);
     const [showApproverPopup, setShowApproverPopup] = useState(false);
+
+    // Dynamic clipping detection for sidebar comment box
+    const wrapperRef = useRef(null);
+    const [isCommentBoxClipped, setIsCommentBoxClipped] = useState(false);
+
+    useEffect(() => {
+        const checkClipping = () => {
+            if (wrapperRef.current) {
+                const rect = wrapperRef.current.getBoundingClientRect();
+                // Comment box is 300px wide, offset 315px to the right
+                setIsCommentBoxClipped(rect.right + 320 > window.innerWidth);
+            }
+        };
+        checkClipping();
+        window.addEventListener('resize', checkClipping);
+        const observer = new ResizeObserver(checkClipping);
+        if (wrapperRef.current) observer.observe(wrapperRef.current);
+        return () => {
+            window.removeEventListener('resize', checkClipping);
+            observer.disconnect();
+        };
+    }, []);
 
     // Text Selection State
     const contentRef = useRef(null);
@@ -154,7 +173,7 @@ const PostCard = ({
     const [selectionState, setSelectionState] = useState(null);
 
     const [commentText, setCommentText] = useState('');
-    const [visibility, setVisibility] = useState('team');
+    const visibility = 'team';
     const [showCommentInput, setShowCommentInput] = useState(false);
     const [activeCommentMenu, setActiveCommentMenu] = useState(null);
     const [deletedComments, setDeletedComments] = useState(new Set());
@@ -166,6 +185,8 @@ const PostCard = ({
     const [showPlatformPopup, setShowPlatformPopup] = useState(false);
     const [showPlatformMenu, setShowPlatformMenu] = useState(false);
     const [hoveredMenuBtn, setHoveredMenuBtn] = useState(null);
+    const [scheduleAnchorEl, setScheduleAnchorEl] = useState(null);
+    const [tempScheduleDate, setTempScheduleDate] = useState(post.date ? new Date(post.date) : new Date());
     const [isPublishing, setIsPublishing] = useState(false);
     const [publishDone, setPublishDone] = useState(false);
     const [isPublished, setIsPublished] = useState(false);
@@ -420,85 +441,145 @@ const PostCard = ({
         const commentReactions = reactions[commentKey] || [];
 
         return (
-            <div key={commentKey} style={{ background: isResolved ? '#f9fafb' : 'white', opacity: isResolved ? 0.7 : 1, border: '1px solid #f3f4f6', borderRadius: '8px', padding: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '9px', fontWeight: 600 }}>
-                            {comment.author.charAt(0).toUpperCase()}
-                        </div>
-                        <span style={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-main)', textDecoration: isResolved ? 'line-through' : 'none' }}>
-                            {comment.author === currentUser || comment.author === 'Admin' ? 'You' : comment.author}
-                        </span>
-                        <span style={{ color: '#9ca3af', fontSize: '0.7rem' }}>· {new Date(comment.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#9ca3af', position: 'relative' }}>
-                        <div style={{ position: 'relative' }}>
-                            <button onClick={() => { setActiveEmojiPicker(activeEmojiPicker === commentKey ? null : commentKey); setActiveCommentMenu(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: 'inherit' }} title="Reaction"><Smile size={14} /></button>
+            <Fade in key={commentKey} timeout={250 + (typeof index === 'number' ? index * 80 : 0)}>
+                <Paper
+                    elevation={0}
+                    sx={{
+                        bgcolor: isResolved ? '#f9fafb' : 'white',
+                        opacity: isResolved ? 0.7 : 1,
+                        border: '1px solid rgba(0,0,0,0.06)',
+                        borderRadius: '10px',
+                        p: '10px',
+                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': {
+                            borderColor: 'rgba(99, 102, 241, 0.15)',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                            transform: 'translateY(-1px)'
+                        }
+                    }}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: '8px' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Avatar
+                                sx={{
+                                    width: 20, height: 20,
+                                    fontSize: '9px', fontWeight: 700,
+                                    background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))'
+                                }}
+                            >
+                                {comment.author.charAt(0).toUpperCase()}
+                            </Avatar>
+                            <Typography component="span" sx={{ fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-main)', textDecoration: isResolved ? 'line-through' : 'none' }}>
+                                {comment.author === currentUser || comment.author === 'Admin' ? 'You' : comment.author}
+                            </Typography>
+                            <Typography component="span" sx={{ color: '#9ca3af', fontSize: '0.7rem' }}>· {new Date(comment.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#9ca3af', position: 'relative' }}>
+                            <Box sx={{ position: 'relative' }}>
+                                <Tooltip title="Reaction" arrow placement="top">
+                                    <IconButton size="small" onClick={() => { setActiveEmojiPicker(activeEmojiPicker === commentKey ? null : commentKey); setActiveCommentMenu(null); }} sx={{ color: 'inherit', p: '3px', transition: 'all 0.2s', '&:hover': { color: '#f59e0b', bgcolor: 'rgba(245,158,11,0.08)' } }}>
+                                        <Smile size={13} />
+                                    </IconButton>
+                                </Tooltip>
 
-                            {activeEmojiPicker === commentKey && (
-                                <div style={{ position: 'absolute', top: '100%', right: '50%', background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '6px', display: 'flex', flexWrap: 'wrap', width: '150px', gap: '6px', zIndex: 60, marginTop: '4px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                                    {['👍', '❤️', '😂', '😮', '😢', '👏', '🔥', '🎉', '😡', '💯', '🤔', '🙌'].map(emoji => (
-                                        <span key={emoji} style={{ cursor: 'pointer', fontSize: '1rem', transition: 'transform 0.1s', padding: '2px' }} onMouseEnter={(e) => e.target.style.transform = 'scale(1.2)'} onMouseLeave={(e) => e.target.style.transform = 'scale(1)'} onClick={() => {
-                                            setReactions(prev => {
-                                                const list = prev[commentKey] || [];
-                                                if (list.includes(emoji)) {
-                                                    return { ...prev, [commentKey]: list.filter(e => e !== emoji) };
-                                                }
-                                                return { ...prev, [commentKey]: [...list, emoji] };
-                                            });
-                                            setActiveEmojiPicker(null);
-                                        }}>{emoji}</span>
-                                    ))}
-                                </div>
+                                {activeEmojiPicker === commentKey && (
+                                    <Fade in timeout={200}>
+                                        <Paper elevation={8} sx={{ position: 'absolute', top: '100%', right: '50%', p: '8px', display: 'flex', flexWrap: 'wrap', width: '160px', gap: '4px', zIndex: 60, mt: '4px', borderRadius: '10px' }}>
+                                            {['👍', '❤️', '😂', '😮', '😢', '👏', '🔥', '🎉', '😡', '💯', '🤔', '🙌'].map(emoji => (
+                                                <Box component="span" key={emoji} sx={{ cursor: 'pointer', fontSize: '1rem', transition: 'transform 0.15s', p: '3px', borderRadius: '6px', display: 'inline-flex', '&:hover': { transform: 'scale(1.3)', bgcolor: 'rgba(0,0,0,0.04)' } }} onClick={() => {
+                                                    setReactions(prev => {
+                                                        const list = prev[commentKey] || [];
+                                                        if (list.includes(emoji)) {
+                                                            return { ...prev, [commentKey]: list.filter(e => e !== emoji) };
+                                                        }
+                                                        return { ...prev, [commentKey]: [...list, emoji] };
+                                                    });
+                                                    setActiveEmojiPicker(null);
+                                                }}>{emoji}</Box>
+                                            ))}
+                                        </Paper>
+                                    </Fade>
+                                )}
+                            </Box>
+                            <Tooltip title={isResolved ? 'Unresolve' : 'Resolve'} arrow placement="top">
+                                <IconButton size="small" onClick={() => setResolvedComments(prev => { const n = new Set(prev); if (n.has(commentKey)) n.delete(commentKey); else n.add(commentKey); return n; })} sx={{ p: '3px', color: isResolved ? '#10b981' : 'inherit', transition: 'all 0.2s', '&:hover': { color: '#10b981', bgcolor: 'rgba(16,185,129,0.08)' } }}>
+                                    <CheckCircle size={13} />
+                                </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Reply" arrow placement="top">
+                                <IconButton size="small" onClick={() => { setCommentText(`@${comment.author} `); if (inputRef.current) inputRef.current.focus(); }} sx={{ p: '3px', color: 'inherit', transition: 'all 0.2s', '&:hover': { color: 'var(--color-primary)', bgcolor: 'rgba(99,102,241,0.08)' } }}>
+                                    <Reply size={13} />
+                                </IconButton>
+                            </Tooltip>
+                            <IconButton size="small" onClick={() => { setActiveCommentMenu(activeCommentMenu === commentKey ? null : commentKey); setActiveEmojiPicker(null); }} sx={{ p: '3px', bgcolor: '#f3f4f6', borderRadius: '5px', color: 'inherit', transition: 'all 0.2s', '&:hover': { bgcolor: '#e5e7eb' } }}>
+                                <MoreHorizontal size={13} />
+                            </IconButton>
+
+                            {activeCommentMenu === commentKey && (
+                                <Fade in timeout={150}>
+                                    <Paper elevation={6} sx={{ position: 'absolute', top: '100%', right: 0, p: '4px', minWidth: '110px', zIndex: 50, mt: '4px', borderRadius: '10px' }}>
+                                        <Box component="button" onClick={() => { setCommentText(textToShow); setEditingComment(commentKey); setActiveCommentMenu(null); }} sx={{ display: 'flex', alignItems: 'center', gap: '8px', p: '7px 12px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-main)', textAlign: 'left', borderRadius: '6px', transition: 'all 0.15s', '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' } }}>
+                                            <Pencil size={12} /> Edit
+                                        </Box>
+                                        <Box component="button" onClick={() => { setDeletedComments(prev => new Set(prev).add(commentKey)); setActiveCommentMenu(null); }} sx={{ display: 'flex', alignItems: 'center', gap: '8px', p: '7px 12px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: '#ef4444', textAlign: 'left', borderRadius: '6px', transition: 'all 0.15s', '&:hover': { bgcolor: 'rgba(239,68,68,0.06)' } }}>
+                                            <Trash2 size={12} /> Delete
+                                        </Box>
+                                    </Paper>
+                                </Fade>
                             )}
-                        </div>
-                        <button onClick={() => setResolvedComments(prev => { const n = new Set(prev); if (n.has(commentKey)) n.delete(commentKey); else n.add(commentKey); return n; })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: isResolved ? '#10b981' : 'inherit' }} title="Resolve"><CheckCircle size={14} /></button>
-                        <button onClick={() => { setCommentText(`@${comment.author} `); if (inputRef.current) inputRef.current.focus(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', color: 'inherit' }} title="Reply"><Reply size={14} /></button>
-                        <button onClick={() => { setActiveCommentMenu(activeCommentMenu === commentKey ? null : commentKey); setActiveEmojiPicker(null); }} style={{ background: '#f3f4f6', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', display: 'flex', color: 'inherit' }}><MoreHorizontal size={14} /></button>
+                        </Box>
+                    </Box>
+                    {comment.selection && (
+                        <Box sx={{ borderLeft: '3px solid #fbbf24', pl: '8px', mb: '6px' }}>
+                            <Chip
+                                label={comment.selection.text}
+                                size="small"
+                                sx={{
+                                    bgcolor: '#fef3c7', color: '#92400e',
+                                    fontSize: '0.72rem', fontWeight: 500,
+                                    height: '22px', borderRadius: '5px',
+                                    '& .MuiChip-label': { px: '6px' }
+                                }}
+                            />
+                        </Box>
+                    )}
+                    <Typography sx={{ fontSize: '0.8rem', color: 'var(--text-main)', textDecoration: isResolved ? 'line-through' : 'none', lineHeight: 1.5 }}>
+                        {textToShow} {editedTexts[commentKey] && <Typography component="span" sx={{ fontSize: '0.65rem', color: '#9ca3af' }}>(edited)</Typography>}
+                    </Typography>
 
-                        {activeCommentMenu === commentKey && (
-                            <div style={{ position: 'absolute', top: '100%', right: 0, background: 'white', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '4px 0', minWidth: '100px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50, marginTop: '4px' }}>
-                                <button onClick={() => { setCommentText(textToShow); setEditingComment(commentKey); setActiveCommentMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--text-main)', textAlign: 'left' }}>
-                                    <Pencil size={12} /> Edit
-                                </button>
-                                <button onClick={() => { setDeletedComments(prev => new Set(prev).add(commentKey)); setActiveCommentMenu(null); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: '#ef4444', textAlign: 'left' }}>
-                                    <Trash2 size={12} /> Delete
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                {comment.selection && (
-                    <div style={{ borderLeft: '3px solid #fbbf24', paddingLeft: '8px', marginBottom: '6px' }}>
-                        <div style={{ background: '#fef3c7', padding: '2px 6px', fontSize: '0.75rem', display: 'inline-block', color: '#92400e', borderRadius: '4px', fontWeight: 500 }}>
-                            {comment.selection.text}
-                        </div>
-                    </div>
-                )}
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-main)', textDecoration: isResolved ? 'line-through' : 'none' }}>
-                    {textToShow} {editedTexts[commentKey] && <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>(edited)</span>}
-                </div>
-
-                {commentReactions.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                        {commentReactions.map((emoji, i) => (
-                            <div key={i} onClick={() => {
-                                setReactions(prev => {
-                                    const list = prev[commentKey] || [];
-                                    return { ...prev, [commentKey]: list.filter(e => e !== emoji) };
-                                });
-                            }} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#1d4ed8', cursor: 'pointer', transition: 'background 0.2s' }}>
-                                {emoji} 1
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
+                    {commentReactions.length > 0 && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', mt: '8px', flexWrap: 'wrap' }}>
+                            {commentReactions.map((emoji, i) => (
+                                <Chip
+                                    key={i}
+                                    label={`${emoji} 1`}
+                                    size="small"
+                                    onClick={() => {
+                                        setReactions(prev => {
+                                            const list = prev[commentKey] || [];
+                                            return { ...prev, [commentKey]: list.filter(e => e !== emoji) };
+                                        });
+                                    }}
+                                    sx={{
+                                        bgcolor: '#eff6ff', border: '1px solid #bfdbfe',
+                                        fontSize: '0.7rem', color: '#1d4ed8',
+                                        cursor: 'pointer', height: '24px',
+                                        transition: 'all 0.2s',
+                                        '&:hover': { bgcolor: '#dbeafe', transform: 'scale(1.05)' },
+                                        '& .MuiChip-label': { px: '6px' }
+                                    }}
+                                />
+                            ))}
+                        </Box>
+                    )}
+                </Paper>
+            </Fade>
         );
     };
 
     return (
         <div
+            ref={wrapperRef}
             className={`post-card ${isMinimized ? 'minimized' : ''}`}
             style={{
                 position: 'relative',
@@ -507,7 +588,7 @@ const PostCard = ({
             }}
         >
             {/* Approval dot - hidden if panel open or mobile */}
-            {(!isMobile && !isPanelOpen) && (
+            {(!isCommentBoxClipped && !isPanelOpen) && (
                 <div
                     onClick={handleApprove}
                     onMouseEnter={() => setShowApproverPopup(true)}
@@ -543,7 +624,7 @@ const PostCard = ({
             )}
 
             {/* Platform icon circle - hidden if panel open or mobile */}
-            {(!isMobile && !isPanelOpen) && (
+            {(!isCommentBoxClipped && !isPanelOpen) && (
                 <div style={{ position: 'absolute', top: '60px', left: isMinimized ? '-44px' : '0', width: '36px', height: '36px', zIndex: showPlatformMenu ? 101 : 10 }}>
                     <style>{`
                         @keyframes spinArc { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -824,184 +905,368 @@ const PostCard = ({
                 )}
 
                 {/* New Responsive Action Bar (shows on smaller screens or when side panel is open) */}
-                {(isMobile || isPanelOpen) && (
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-around',
-                        padding: '10px 0',
-                        margin: '8px 0',
-                        borderTop: '1px solid var(--input-border)',
-                        borderBottom: '1px solid var(--input-border)',
-                        background: 'transparent'
-                    }}>
-                        {/* Approval Action */}
-                        <div
-                            onClick={handleApprove}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                cursor: canApprove ? 'pointer' : 'default',
-                                color: hasUserApproved ? '#22c55e' : 'var(--text-main)',
-                                transition: 'all 0.2s',
-                                fontSize: '0.85rem'
-                            }}
-                        >
-                            <Check size={18} strokeWidth={hasUserApproved ? 3 : 2} />
-                        </div>
-
-                        <div style={{ width: '1px', height: '20px', background: 'rgba(0,0,0,0.06)' }} />
-
-                        {/* Comment Count Action */}
-                        <div
-                            onClick={(e) => { e.stopPropagation(); if (onOpenComments) onOpenComments(post); }}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                cursor: 'pointer',
-                                color: 'var(--text-main)',
-                                fontSize: '0.85rem'
-                            }}
-                        >
-                            <MessageSquare size={18} />
-                            <span>Comment {post.comments?.length || 0}</span>
-                        </div>
-
-                        <div style={{ width: '1px', height: '20px', background: 'rgba(0,0,0,0.06)' }} />
-
-                        {/* Status Action */}
-                        <div style={{
+                {(isCommentBoxClipped || isPanelOpen) && (
+                    <Fade in timeout={300}>
+                        <Box sx={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
-                            color: post.status === 'Published' ? '#3b82f6' : 'var(--text-main)',
-                            fontSize: '0.85rem'
+                            justifyContent: 'space-around',
+                            py: '8px',
+                            my: '8px',
+                            borderTop: '1px solid var(--input-border)',
+                            borderBottom: '1px solid var(--input-border)',
+                            background: 'transparent'
                         }}>
-                            {post.status === 'Published' ? <Send size={16} /> : <Clock size={16} />}
-                            <span>{post.status}</span>
-                        </div>
-                    </div>
+                            {/* Approval Action */}
+                            <Tooltip
+                                title={hasUserApproved || approvedBy.length > 0 ? `Approved by: ${approvedBy.join(', ') || currentUser}` : canApprove ? 'Click to approve' : 'Approval'}
+                                arrow
+                                placement="top"
+                            >
+                                <IconButton
+                                    onClick={handleApprove}
+                                    size="small"
+                                    disabled={!canApprove}
+                                    sx={{
+                                        color: hasUserApproved ? '#22c55e' : 'var(--text-main)',
+                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        borderRadius: '8px',
+                                        px: 1.5,
+                                        '&:hover': {
+                                            bgcolor: hasUserApproved ? 'rgba(34,197,94,0.08)' : 'rgba(0,0,0,0.04)',
+                                            transform: 'scale(1.08)'
+                                        }
+                                    }}
+                                >
+                                    <Check size={18} strokeWidth={hasUserApproved ? 3 : 2} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(0,0,0,0.06)' }} />
+
+                            {/* Comment Count Action */}
+                            <Tooltip title="Open comments" arrow placement="top">
+                                <IconButton
+                                    onClick={(e) => { e.stopPropagation(); if (onOpenComments) onOpenComments(post); }}
+                                    size="small"
+                                    sx={{
+                                        color: 'var(--text-main)',
+                                        borderRadius: '8px',
+                                        px: 1.5,
+                                        gap: '6px',
+                                        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        '&:hover': {
+                                            bgcolor: 'rgba(99,102,241,0.06)',
+                                            color: 'var(--color-primary)',
+                                            transform: 'scale(1.05)'
+                                        }
+                                    }}
+                                >
+                                    <MuiBadge badgeContent={post.comments?.length || 0} color="primary" sx={{ '& .MuiBadge-badge': { fontSize: '0.65rem', height: '16px', minWidth: '16px' } }}>
+                                        <MessageSquare size={18} />
+                                    </MuiBadge>
+                                    <Typography component="span" sx={{ fontSize: '0.82rem', ml: 0.5 }}>Comment</Typography>
+                                </IconButton>
+                            </Tooltip>
+
+                            <Divider orientation="vertical" flexItem sx={{ mx: 0.5, borderColor: 'rgba(0,0,0,0.06)' }} />
+
+                            {/* Status Action */}
+                            <Tooltip title={post.status === 'Draft' || post.status === 'Scheduled' ? 'Click to schedule' : ''} arrow placement="top">
+                                <Chip
+                                    icon={post.status === 'Published' ? <Send size={13} /> : <Clock size={13} />}
+                                    label={post.status}
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={(e) => {
+                                        if (post.status === 'Draft' || post.status === 'Scheduled') {
+                                            setScheduleAnchorEl(e.currentTarget);
+                                            setTempScheduleDate(post.date ? new Date(post.date) : new Date());
+                                        }
+                                    }}
+                                    sx={{
+                                        fontSize: '0.78rem',
+                                        fontWeight: 600,
+                                        height: '28px',
+                                        borderRadius: '8px',
+                                        color: post.status === 'Published' ? '#3b82f6' : 'var(--text-main)',
+                                        borderColor: post.status === 'Published' ? 'rgba(59,130,246,0.3)' : 'rgba(0,0,0,0.1)',
+                                        bgcolor: post.status === 'Published' ? 'rgba(59,130,246,0.05)' : 'transparent',
+                                        transition: 'all 0.2s',
+                                        cursor: (post.status === 'Draft' || post.status === 'Scheduled') ? 'pointer' : 'default',
+                                        '& .MuiChip-icon': { color: 'inherit' },
+                                        '&:hover': (post.status === 'Draft' || post.status === 'Scheduled') ? {
+                                            bgcolor: 'rgba(0,0,0,0.04)',
+                                            borderColor: 'rgba(0,0,0,0.2)'
+                                        } : {}
+                                    }}
+                                />
+                            </Tooltip>
+                        </Box>
+                    </Fade>
                 )}
+
+                {/* Schedule Calendar Popover */}
+                <Popover
+                    open={Boolean(scheduleAnchorEl)}
+                    anchorEl={scheduleAnchorEl}
+                    onClose={() => setScheduleAnchorEl(null)}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                    PaperProps={{
+                        sx: {
+                            mt: 1, p: 2, width: 320, borderRadius: '12px',
+                            boxShadow: '0 10px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05)'
+                        }
+                    }}
+                >
+                    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <ChevronLeft
+                                    size={16}
+                                    color="#9ca3af"
+                                    cursor="pointer"
+                                    onClick={() => {
+                                        const newDate = new Date(tempScheduleDate);
+                                        newDate.setMonth(newDate.getMonth() - 1);
+                                        setTempScheduleDate(newDate);
+                                    }}
+                                />
+                                <Typography sx={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
+                                    {tempScheduleDate.toLocaleString('default', { month: 'long' })} {tempScheduleDate.getFullYear()}
+                                </Typography>
+                                <ChevronRight
+                                    size={16}
+                                    color="#9ca3af"
+                                    cursor="pointer"
+                                    onClick={() => {
+                                        const newDate = new Date(tempScheduleDate);
+                                        newDate.setMonth(newDate.getMonth() + 1);
+                                        setTempScheduleDate(newDate);
+                                    }}
+                                />
+                            </Box>
+                        </Box>
+
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', fontSize: '12px', fontWeight: 600, color: '#6b7280', mb: 1 }}>
+                            <Box>Mo</Box><Box>Tu</Box><Box>We</Box><Box>Th</Box><Box>Fr</Box><Box>Sa</Box><Box>Su</Box>
+                        </Box>
+
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center' }}>
+                            {(() => {
+                                const currYear = tempScheduleDate.getFullYear();
+                                const currMonth = tempScheduleDate.getMonth();
+                                const daysInMonth = new Date(currYear, currMonth + 1, 0).getDate();
+                                const firstDayIndex = new Date(currYear, currMonth, 1).getDay();
+                                const prevDays = new Date(currYear, currMonth, 0).getDate();
+
+                                const cells = [];
+                                for (let x = firstDayIndex === 0 ? 6 : firstDayIndex - 1; x > 0; x--) {
+                                    cells.push({ day: prevDays - x + 1, current: false, date: new Date(currYear, currMonth - 1, prevDays - x + 1) });
+                                }
+                                for (let i = 1; i <= daysInMonth; i++) {
+                                    cells.push({ day: i, current: true, date: new Date(currYear, currMonth, i) });
+                                }
+                                const nextDays = 42 - cells.length;
+                                for (let j = 1; j <= nextDays; j++) {
+                                    cells.push({ day: j, current: false, date: new Date(currYear, currMonth + 1, j) });
+                                }
+
+                                return cells.map((cell, idx) => {
+                                    const isSelected = cell.current && cell.date.toDateString() === tempScheduleDate.toDateString();
+                                    return (
+                                        <Box
+                                            key={idx}
+                                            onClick={() => {
+                                                const newDate = new Date(cell.date);
+                                                newDate.setHours(tempScheduleDate.getHours());
+                                                newDate.setMinutes(tempScheduleDate.getMinutes());
+                                                setTempScheduleDate(newDate);
+                                            }}
+                                            sx={{
+                                                py: 0.75, fontSize: '13px', borderRadius: '6px', cursor: 'pointer',
+                                                bgcolor: isSelected ? '#3b82f6' : 'transparent',
+                                                color: isSelected ? 'white' : (cell.current ? '#111827' : '#d1d5db'),
+                                                fontWeight: isSelected ? 700 : 500,
+                                                '&:hover': { bgcolor: isSelected ? '#2563eb' : 'rgba(0,0,0,0.04)' }
+                                            }}
+                                        >
+                                            {cell.day}
+                                        </Box>
+                                    );
+                                });
+                            })()}
+                        </Box>
+
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.85rem' }}>Select Time</Typography>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 2 }}>
+                            <Box sx={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '6px', p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>
+                                    {((tempScheduleDate.getHours() % 12) || 12).toString().padStart(2, '0')}
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <ChevronLeft size={10} style={{ transform: 'rotate(90deg)', cursor: 'pointer' }} onClick={() => { const d = new Date(tempScheduleDate); d.setHours(d.getHours() + 1); setTempScheduleDate(d); }} />
+                                    <ChevronLeft size={10} style={{ transform: 'rotate(-90deg)', cursor: 'pointer' }} onClick={() => { const d = new Date(tempScheduleDate); d.setHours(d.getHours() - 1); setTempScheduleDate(d); }} />
+                                </Box>
+                            </Box>
+                            <Typography sx={{ fontWeight: 'bold' }}>:</Typography>
+                            <Box sx={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '6px', p: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>
+                                    {tempScheduleDate.getMinutes().toString().padStart(2, '0')}
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <ChevronLeft size={10} style={{ transform: 'rotate(90deg)', cursor: 'pointer' }} onClick={() => { const d = new Date(tempScheduleDate); d.setMinutes(d.getMinutes() + 1); setTempScheduleDate(d); }} />
+                                    <ChevronLeft size={10} style={{ transform: 'rotate(-90deg)', cursor: 'pointer' }} onClick={() => { const d = new Date(tempScheduleDate); d.setMinutes(d.getMinutes() - 1); setTempScheduleDate(d); }} />
+                                </Box>
+                            </Box>
+                            <Box
+                                sx={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '6px', p: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', bgcolor: 'rgba(0,0,0,0.02)', '&:hover': { bgcolor: 'rgba(0,0,0,0.05)' } }}
+                                onClick={() => { const d = new Date(tempScheduleDate); d.setHours((d.getHours() + 12) % 24); setTempScheduleDate(d); }}
+                            >
+                                <Typography sx={{ fontSize: '13px', fontWeight: 600 }}>
+                                    {tempScheduleDate.getHours() >= 12 ? 'PM' : 'AM'}
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                            <MuiButton size="small" sx={{ textTransform: 'none', color: '#6b7280', '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' } }} onClick={() => setScheduleAnchorEl(null)}>
+                                Cancel
+                            </MuiButton>
+                            <MuiButton size="small" variant="contained" sx={{ textTransform: 'none', bgcolor: '#3b82f6', boxShadow: 'none', '&:hover': { bgcolor: '#2563eb', boxShadow: '0 2px 8px rgba(59,130,246,0.25)' } }} onClick={() => setScheduleAnchorEl(null)}>
+                                Save
+                            </MuiButton>
+                        </Box>
+                    </Box>
+                </Popover>
 
                 {/* Universal popover rendering safely attached to Card limits */}
                 {selectionState && !showCommentInput && (
-                    <div
-                        className="comment-trigger-btn"
-                        style={{
-                            position: 'absolute',
-                            top: selectionState.top,
-                            left: selectionState.btnLeft,
-                            transform: 'translateX(-50%)',
-                            background: '#1f2937',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            padding: '6px 12px',
-                            fontSize: '0.8rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1)',
-                            zIndex: 100,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            transition: 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s',
-                            userSelect: 'none'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)';
-                            e.currentTarget.style.background = '#111827';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
-                            e.currentTarget.style.background = '#1f2937';
-                        }}
-                        onPointerDown={(e) => {
-                            e.preventDefault(); // Prevent selection loss before click
-                        }}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setShowCommentInput(true);
-                        }}
-                    >
-                        <MessageSquare size={14} /> Add Comment
-                    </div>
+                    <Zoom in timeout={250}>
+                        <MuiButton
+                            variant="contained"
+                            size="small"
+                            startIcon={<MessageSquare size={14} />}
+                            className="comment-trigger-btn"
+                            onPointerDown={(e) => e.preventDefault()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowCommentInput(true);
+                            }}
+                            sx={{
+                                position: 'absolute',
+                                top: selectionState.top,
+                                left: selectionState.btnLeft,
+                                transform: 'translateX(-50%)',
+                                bgcolor: '#1f2937',
+                                color: 'white',
+                                borderRadius: '8px',
+                                px: 2,
+                                py: 0.75,
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.25)',
+                                zIndex: 100,
+                                transition: 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                '&:hover': {
+                                    bgcolor: '#111827',
+                                    transform: 'translateX(-50%) scale(1.05)',
+                                    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)'
+                                }
+                            }}
+                        >
+                            Add Comment
+                        </MuiButton>
+                    </Zoom>
                 )}
 
                 {showCommentInput && selectionState && (
-                    <div
-                        className="comment-popover"
-                        style={{
-                            position: 'absolute',
-                            top: selectionState.top,
-                            left: selectionState.popoverLeft,
-                            transform: 'translateX(-50%)',
-                            background: 'rgba(255, 255, 255, 0.95)',
-                            backdropFilter: 'blur(12px)',
-                            border: '1px solid rgba(0, 0, 0, 0.08)',
-                            borderRadius: '12px',
-                            padding: '16px',
-                            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                            zIndex: 110,
-                            width: '320px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '14px',
-                            animation: 'popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                        }}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Reference block for selected text */}
-                        <div style={{
-                            background: '#f9fafb',
-                            borderLeft: '3px solid #6366f1',
-                            padding: '8px',
-                            borderRadius: '4px',
-                            fontSize: '0.8rem',
-                            color: '#4b5563',
-                            fontStyle: 'italic',
-                            maxHeight: '60px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                        }}>
-                            "{selectionState.text}"
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                            <div style={{
-                                width: '28px', height: '28px', borderRadius: '50%',
-                                background: 'var(--color-primary)', color: 'white',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: '12px', fontWeight: 600, flexShrink: 0
-                            }}>
-                                {(currentUser || 'U').charAt(0).toUpperCase()}
-                            </div>
-                            <textarea
-                                value={commentText}
-                                onChange={(e) => setCommentText(e.target.value)}
-                                placeholder="Add your comment..."
-                                style={{
-                                    width: '100%',
-                                    border: 'none',
-                                    outline: 'none',
-                                    fontSize: '0.85rem',
-                                    resize: 'none',
-                                    minHeight: '40px',
-                                    fontFamily: 'inherit',
-                                    paddingTop: '4px',
-                                    color: 'var(--text-main)'
+                    <Zoom in timeout={300} style={{ transformOrigin: 'top center' }}>
+                        <Paper
+                            elevation={16}
+                            className="comment-popover"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{
+                                position: 'absolute',
+                                top: selectionState.top,
+                                left: selectionState.popoverLeft,
+                                transform: 'translateX(-50%)',
+                                bgcolor: 'rgba(255, 255, 255, 0.98)',
+                                backdropFilter: 'blur(16px)',
+                                borderRadius: '14px',
+                                p: 2,
+                                zIndex: 110,
+                                width: '320px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '14px',
+                                border: '1px solid rgba(0, 0, 0, 0.06)'
+                            }}
+                        >
+                            {/* Reference block for selected text */}
+                            <Paper
+                                elevation={0}
+                                sx={{
+                                    bgcolor: '#f9fafb',
+                                    borderLeft: '3px solid var(--color-primary)',
+                                    p: 1,
+                                    borderRadius: '0 8px 8px 0',
+                                    fontSize: '0.8rem',
+                                    color: '#4b5563',
+                                    fontStyle: 'italic',
+                                    maxHeight: '60px',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
                                 }}
-                                autoFocus
-                            />
-                        </div>
+                            >
+                                "{selectionState.text}"
+                            </Paper>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', borderTop: '1px solid #f3f4f6', paddingTop: '10px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <button
-                                    type="button"
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                                <Avatar
+                                    sx={{
+                                        width: 28, height: 28,
+                                        fontSize: '12px', fontWeight: 700,
+                                        background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
+                                        flexShrink: 0
+                                    }}
+                                >
+                                    {(currentUser || 'U').charAt(0).toUpperCase()}
+                                </Avatar>
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    minRows={2}
+                                    maxRows={4}
+                                    size="small"
+                                    variant="standard"
+                                    value={commentText}
+                                    onChange={(e) => setCommentText(e.target.value)}
+                                    placeholder="Add your comment..."
+                                    autoFocus
+                                    slotProps={{
+                                        input: {
+                                            disableUnderline: true,
+                                            sx: {
+                                                fontSize: '0.85rem',
+                                                color: 'var(--text-main)',
+                                                fontFamily: 'inherit',
+                                                pt: '4px'
+                                            }
+                                        }
+                                    }}
+                                />
+                            </Box>
+
+                            <Divider sx={{ borderColor: 'rgba(0,0,0,0.05)' }} />
+
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1 }}>
+                                <MuiButton
+                                    size="small"
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
@@ -1009,111 +1274,142 @@ const PostCard = ({
                                         setSelectionState(null);
                                         window.getSelection().removeAllRanges();
                                     }}
-                                    style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 500 }}
+                                    sx={{
+                                        color: '#6b7280',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 500,
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                        px: 1.5,
+                                        '&:hover': { bgcolor: 'rgba(0,0,0,0.04)' }
+                                    }}
                                 >
                                     Cancel
-                                </button>
-                                <button
-                                    type="button"
+                                </MuiButton>
+                                <MuiButton
+                                    size="small"
+                                    variant="contained"
+                                    disabled={!commentText.trim()}
                                     onMouseDown={(e) => {
-                                        e.preventDefault(); // Prevent input blur
+                                        e.preventDefault();
                                         e.stopPropagation();
                                         handleSubmitComment(e);
                                     }}
-                                    disabled={!commentText.trim()}
-                                    style={{
-                                        background: 'none', border: 'none',
-                                        color: commentText.trim() ? '#6366f1' : '#9ca3af',
-                                        fontSize: '0.8rem', cursor: commentText.trim() ? 'pointer' : 'default',
-                                        fontWeight: 600
+                                    sx={{
+                                        bgcolor: 'var(--color-primary)',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 600,
+                                        textTransform: 'none',
+                                        borderRadius: '8px',
+                                        px: 2,
+                                        boxShadow: 'none',
+                                        transition: 'all 0.2s',
+                                        '&:hover': {
+                                            bgcolor: '#4f46e5',
+                                            boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
+                                        },
+                                        '&.Mui-disabled': {
+                                            bgcolor: '#e5e7eb',
+                                            color: '#9ca3af'
+                                        }
                                     }}
                                 >
                                     Post
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                                </MuiButton>
+                            </Box>
+                        </Paper>
+                    </Zoom>
                 )}
             </Card>
 
             {/* Inline floating comments box on the right side */}
-            {post.comments !== undefined && !isMobile && !isPanelOpen && (
-                <div style={{
-                    position: 'absolute',
-                    top: '0',
-                    right: '-315px',
-                    width: '300px',
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                    border: '1px solid rgba(0, 0, 0, 0.05)',
-                    padding: '16px',
-                    zIndex: 200,
-                    transition: 'all 0.3s ease'
-                }}>
-                    {/* Real Input */}
-                    <div
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f9fafb', border: '1px solid #e5e7eb', padding: '6px 12px', borderRadius: '8px', marginBottom: '12px' }}
+            {post.comments !== undefined && !isCommentBoxClipped && !isPanelOpen && (
+                <Fade in timeout={350}>
+                    <Paper
+                        elevation={12}
+                        sx={{
+                            position: 'absolute',
+                            top: '0',
+                            right: '-315px',
+                            width: '300px',
+                            bgcolor: 'rgba(255, 255, 255, 0.98)',
+                            backdropFilter: 'blur(12px)',
+                            borderRadius: '16px',
+                            border: '1px solid rgba(0, 0, 0, 0.04)',
+                            p: '16px',
+                            zIndex: 200,
+                            transition: 'box-shadow 0.3s ease, transform 0.3s ease',
+                            '&:hover': {
+                                boxShadow: '0 14px 48px rgba(0,0,0,0.15), 0 0 0 1px rgba(99,102,241,0.08)'
+                            }
+                        }}
                     >
-                        <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))', color: 'white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '10px', fontWeight: 600, flexShrink: 0 }}>
-                            {(currentUser || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    e.preventDefault();
-                                    handleSubmitComment(e);
-                                }
-                            }}
-                            placeholder={editingComment !== null ? "Edit comment..." : "Say something..."}
-                            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '0.75rem', color: 'var(--text-main)', minWidth: 0 }}
-                        />
-                        <button
-                            onClick={handleSubmitComment}
-                            disabled={!commentText.trim()}
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: commentText.trim() ? 'var(--color-primary)' : '#9ca3af',
-                                cursor: commentText.trim() ? 'pointer' : 'default',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: 0,
-                                transition: 'color 0.2s'
-                            }}
-                        >
-                            <Send size={14} />
-                        </button>
-                    </div>
+                        {/* Input Row */}
+                        <Box sx={{
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                            bgcolor: '#f9fafb', border: '1px solid #e5e7eb',
+                            p: '6px 12px', borderRadius: '10px', mb: '12px',
+                            transition: 'border-color 0.2s, box-shadow 0.2s',
+                            '&:focus-within': {
+                                borderColor: 'var(--color-primary)',
+                                boxShadow: '0 0 0 3px rgba(99,102,241,0.08)'
+                            }
+                        }}>
+                            <Avatar
+                                sx={{
+                                    width: 22, height: 22,
+                                    fontSize: '10px', fontWeight: 700,
+                                    background: 'linear-gradient(135deg, var(--color-primary), var(--color-accent))',
+                                    flexShrink: 0
+                                }}
+                            >
+                                {(currentUser || 'U').charAt(0).toUpperCase()}
+                            </Avatar>
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleSubmitComment(e);
+                                    }
+                                }}
+                                placeholder={editingComment !== null ? "Edit comment..." : "Say something..."}
+                                style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '0.75rem', color: 'var(--text-main)', minWidth: 0 }}
+                            />
+                            <Tooltip title="Send" arrow placement="top">
+                                <span>
+                                    <IconButton
+                                        size="small"
+                                        onClick={handleSubmitComment}
+                                        disabled={!commentText.trim()}
+                                        sx={{
+                                            color: commentText.trim() ? 'var(--color-primary)' : '#9ca3af',
+                                            p: '4px',
+                                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            '&:hover': {
+                                                color: '#4f46e5',
+                                                bgcolor: 'rgba(99,102,241,0.08)',
+                                                transform: 'scale(1.15)'
+                                            }
+                                        }}
+                                    >
+                                        <Send size={14} />
+                                    </IconButton>
+                                </span>
+                            </Tooltip>
+                        </Box>
 
-                    {/* Comments List */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {post.comments.map(renderCommentItem)}
-                    </div>
-                </div>
+                        {/* Comments List */}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {post.comments.map(renderCommentItem)}
+                        </Box>
+                    </Paper>
+                </Fade>
             )}
 
-            {/* Mobile / Panel-Open Inline Comments List */}
-            {(isMobile || isPanelOpen) && post.comments && post.comments.length > 0 && (
-                <div style={{
-                    marginTop: '12px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px',
-                    padding: '0 4px'
-                }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
-                        Comments
-                    </div>
-                    {post.comments.map(renderCommentItem)}
-                </div>
-            )}
         </div>
     );
 };

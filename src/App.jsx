@@ -17,7 +17,7 @@ import { getAccessToken } from './services/authService';
 function App() {
   // Check if user is authenticated for root route
   const isAuthenticated = !!getAccessToken();
-  
+
   return (
     <Router>
       <NotificationProvider>
