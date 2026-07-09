@@ -4,7 +4,6 @@
 import axios from 'axios';
 import { logout } from './authService';
 import { mapError } from './errorMapper';
-import { getOrCreateDeviceId } from '../utils/deviceId';
 
 const api = axios.create({
     baseURL: `${(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')}/api`,
@@ -22,9 +21,6 @@ api.interceptors.request.use(
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
-
-        // Attach secure device fingerprint
-        //config.headers['X-Device-Id'] = getOrCreateDeviceId();
 
         return config;
     },

@@ -76,6 +76,7 @@ const FilterDropdown = ({ onFilterChange }) => {
                         left: 0,
                         minWidth: '320px',
                         padding: '1.5rem',
+                        zIndex: 100
                     }}>
                         <div style={{ marginBottom: '1.25rem' }}>
                             <label style={{

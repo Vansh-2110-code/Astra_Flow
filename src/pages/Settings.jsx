@@ -3,18 +3,17 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { Building2, Palette, Shield, Plug, Lock, Bell, AlertTriangle, Copy, Check, User, Camera, Loader2, Globe, Facebook } from 'lucide-react';
-import { updateWorkspace, getWorkspaceDetail, deleteWorkspace } from '../services/workspaceService';
-import { initiateFacebookLogin, getFacebookChannels, deleteFacebookChannel } from '../services/channelService';
+import { Building2, Palette, Shield, Plug, Bell, AlertTriangle, Check, Loader2, Globe, Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
+import { updateWorkspace, getWorkspaceDetail, deleteWorkspace, uploadWorkspaceLogo } from '../services/workspaceService';
+import { initiateFacebookLogin, initiateInstagramLogin, initiateLinkedInLogin, initiateTwitterLogin, getConnectedChannels, disconnectChannel, verifyChannel } from '../services/channelService';
+import ConnectFacebookButton from '../components/ConnectFacebookButton';
 
 const TABS = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'workspace', label: 'Workspace', icon: Building2 },
+    { id: 'workspace', label: 'Workspace Info', icon: Building2 },
     { id: 'branding', label: 'Branding', icon: Palette },
     { id: 'roles', label: 'Roles & Permissions', icon: Shield },
     { id: 'integrations', label: 'Integrations', icon: Plug },
-    { id: 'security', label: 'Security', icon: Lock },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'notifications', label: 'Workspace Notifications', icon: Bell },
     { id: 'dangerZone', label: 'Danger Zone', icon: AlertTriangle }
 ];
 
@@ -23,6 +22,9 @@ const PERMISSIONS = ['Create Post', 'Edit Post', 'Approve', 'Publish', 'Schedule
 
 const INTEGRATION_APPS = [
     { id: 'facebook', name: 'Facebook' },
+    { id: 'instagram', name: 'Instagram' },
+    { id: 'linkedin', name: 'LinkedIn' },
+    { id: 'twitter', name: 'X (Twitter)' },
     { id: 'canva', name: 'Canva' },
     { id: 'slack', name: 'Slack' },
     { id: 'gdrive', name: 'Google Drive' },
@@ -61,20 +63,12 @@ const Settings = () => {
     const { workspaceId } = useParams();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const [activeTab, setActiveTab] = useState('profile');
-    const [profile, setProfile] = useState({
-        firstName: 'Alex',
-        lastName: 'Rivera',
-        email: 'alex.rivera@example.com',
-        phone: '+1 (555) 000-0000',
-        dob: '1995-06-15',
-        gender: 'Male',
-        avatar: null
-    });
+    const [activeTab, setActiveTab] = useState('workspace');
     const [workspaceName, setWorkspaceName] = useState('Loading...');
     const [timezone, setTimezone] = useState('UTC');
-    const [twoFAEnabled, setTwoFAEnabled] = useState(false);
     const [permMatrix, setPermMatrix] = useState(defaultMatrix);
+    const [workspaceLogo, setWorkspaceLogo] = useState(null);
+    const [logoLoading, setLogoLoading] = useState(false);
 
     // Initialize integrations from localStorage
     const [integrations, setIntegrations] = useState(() => {
@@ -86,7 +80,6 @@ const Settings = () => {
         } catch (err) {
             console.error('Failed to load integrations from localStorage:', err);
         }
-        // Default state if nothing stored
         return {
             facebook: false,
             canva: true,
@@ -97,12 +90,28 @@ const Settings = () => {
         };
     });
 
-    const [maskedKey, setMaskedKey] = useState('lc_live_••••••••••••••••••••');
-    const [keyCopied, setKeyCopied] = useState(false);
+    // Workspace-specific notification settings
+    const [workspaceNotifications, setWorkspaceNotifications] = useState(() => {
+        try {
+            const stored = localStorage.getItem(`workspace_${workspaceId}_notifications`);
+            if (stored) return JSON.parse(stored);
+        } catch (e) {
+            console.error('Failed to load workspace notifications from localStorage:', e);
+        }
+        return {
+            notifyReviewer: true,
+            notifyAuthor: true,
+            alertOnDisconnect: true,
+            weeklyDigest: true,
+            slackIntegration: false
+        };
+    });
+
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
-    const [connectedFacebookChannels, setConnectedFacebookChannels] = useState([]);
+    const [connectedChannels, setConnectedChannels] = useState([]);
+    const [verificationStatuses, setVerificationStatuses] = useState({});
 
     // Save integrations to localStorage whenever they change
     useEffect(() => {
@@ -111,59 +120,119 @@ const Settings = () => {
         }
     }, [integrations, workspaceId]);
 
+    // Save workspace notification preferences to localStorage
+    useEffect(() => {
+        if (workspaceId) {
+            localStorage.setItem(`workspace_${workspaceId}_notifications`, JSON.stringify(workspaceNotifications));
+        }
+    }, [workspaceNotifications, workspaceId]);
+
     const togglePerm = (role, perm) => {
         const key = `${role}-${perm}`;
         setPermMatrix(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
     const toggleIntegration = async (id) => {
+        const redirectUri = window.location.href;
         if (id === 'facebook') {
-            if (!integrations.facebook) {
-                // Connect Facebook
-                try {
-                    // Use the channelService to initiate Facebook OAuth
-                    await initiateFacebookLogin(workspaceId);
-                    // The function will handle the redirect, so no further action needed
-                } catch (error) {
-                    console.error('Failed to initiate Facebook login:', error);
-                    setToast({
-                        type: 'error',
-                        message: 'Failed to connect Facebook. Please try again.'
-                    });
-                    setTimeout(() => setToast(null), 4000);
-                }
-            } else {
-                // Disconnect Facebook
-                try {
-                    // Assuming we disconnect all or there's a specific channel. Since the UI is a toggle per platform, 
-                    // we might need to disconnect the first/all connected channels if there's no specific channel selector here.
-                    // For now, if there's at least one, disconnect the first one to toggle state.
-                    if (connectedFacebookChannels.length > 0) {
-                        await deleteFacebookChannel(connectedFacebookChannels[0].id, workspaceId);
-                    }
-                    setIntegrations(prev => ({ ...prev, facebook: false }));
-                    setConnectedFacebookChannels([]);
-                    setToast({
-                        type: 'success',
-                        message: 'Facebook disconnected successfully.'
-                    });
-                } catch (error) {
-                    console.error('Failed to disconnect Facebook:', error);
-                    setToast({
-                        type: 'error',
-                        message: 'Failed to disconnect Facebook. Please try again.'
-                    });
-                }
-                setTimeout(() => setToast(null), 3000);
+            try {
+                await initiateFacebookLogin(workspaceId, redirectUri);
+            } catch (error) {
+                console.error('Failed to initiate Facebook login:', error);
+                setToast({
+                    type: 'error',
+                    message: 'Failed to connect Facebook. Please try again.'
+                });
+                setTimeout(() => setToast(null), 4000);
+            }
+            return;
+        }
+        if (id === 'instagram') {
+            try {
+                await initiateInstagramLogin(workspaceId, redirectUri);
+            } catch (error) {
+                console.error('Failed to initiate Instagram login:', error);
+                setToast({
+                    type: 'error',
+                    message: 'Failed to connect Instagram. Please try again.'
+                });
+                setTimeout(() => setToast(null), 4000);
+            }
+            return;
+        }
+        if (id === 'linkedin') {
+            try {
+                await initiateLinkedInLogin(workspaceId, redirectUri);
+            } catch (error) {
+                console.error('Failed to initiate LinkedIn login:', error);
+                setToast({
+                    type: 'error',
+                    message: 'Failed to connect LinkedIn. Please try again.'
+                });
+                setTimeout(() => setToast(null), 4000);
+            }
+            return;
+        }
+        if (id === 'twitter') {
+            try {
+                await initiateTwitterLogin(workspaceId, redirectUri);
+            } catch (error) {
+                console.error('Failed to initiate Twitter login:', error);
+                setToast({
+                    type: 'error',
+                    message: 'Failed to connect X (Twitter). Please try again.'
+                });
+                setTimeout(() => setToast(null), 4000);
             }
             return;
         }
         setIntegrations(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    const handleCopyKey = () => {
-        setKeyCopied(true);
-        setTimeout(() => setKeyCopied(false), 2000);
+    const handleDisconnectSingleChannel = async (channelId) => {
+        try {
+            await disconnectChannel(channelId);
+            setConnectedChannels(prev => prev.filter(c => c.id !== channelId));
+            setToast({
+                type: 'success',
+                message: 'Account disconnected successfully.'
+            });
+        } catch (error) {
+            console.error('Failed to disconnect channel:', error);
+            setToast({
+                type: 'error',
+                message: 'Failed to disconnect account. Please try again.'
+            });
+        }
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    const handleVerifyChannel = async (channelId) => {
+        setVerificationStatuses(prev => ({ ...prev, [channelId]: 'verifying' }));
+        try {
+            const data = await verifyChannel(channelId);
+            if (data.verified) {
+                setVerificationStatuses(prev => ({ ...prev, [channelId]: 'verified' }));
+                setToast({
+                    type: 'success',
+                    message: data.message || 'Channel verified successfully!'
+                });
+            } else {
+                setVerificationStatuses(prev => ({ ...prev, [channelId]: 'failed' }));
+                setToast({
+                    type: 'error',
+                    message: data.error || 'Verification failed.'
+                });
+            }
+        } catch (error) {
+            console.error('Failed to verify channel:', error);
+            setVerificationStatuses(prev => ({ ...prev, [channelId]: 'failed' }));
+            setToast({
+                type: 'error',
+                message: 'Failed to complete channel verification.'
+            });
+        }
+        setTimeout(() => setToast(null), 3000);
     };
 
     // Load workspace details on mount
@@ -174,6 +243,7 @@ const Settings = () => {
                 const data = await getWorkspaceDetail(workspaceId);
                 setWorkspaceName(data.name || '');
                 setTimezone(data.timezone || 'Asia/Kolkata');
+                setWorkspaceLogo(data.logo || null);
             } catch (err) {
                 console.error('Failed to fetch workspace details:', err);
                 setToast({ type: 'error', message: 'Failed to load workspace settings' });
@@ -183,26 +253,28 @@ const Settings = () => {
         fetchDetails();
     }, [workspaceId]);
 
-    // Handle Facebook OAuth redirect callbacks
+    // Handle OAuth redirect callbacks
     useEffect(() => {
         const facebookStatus = searchParams.get('facebook');
+        const instagramStatus = searchParams.get('instagram');
+        const linkedinStatus = searchParams.get('linkedin');
+        const twitterStatus = searchParams.get('twitter');
 
-        if (facebookStatus) {
-            // Set active tab to integrations
+        if (facebookStatus || instagramStatus || linkedinStatus || twitterStatus) {
             setActiveTab('integrations');
 
-            // Handle different Facebook OAuth responses
-            switch (facebookStatus) {
+            const status = facebookStatus || instagramStatus || linkedinStatus || twitterStatus;
+            const platformName = facebookStatus ? 'Facebook' : (instagramStatus ? 'Instagram' : (linkedinStatus ? 'LinkedIn' : 'X (Twitter)'));
+
+            switch (status) {
                 case 'success':
-                    setIntegrations(prev => ({ ...prev, facebook: true }));
                     setToast({
                         type: 'success',
-                        message: 'Facebook connected successfully!'
+                        message: `${platformName} connected successfully!`
                     });
-                    // Refresh channels
                     if (workspaceId) {
-                        getFacebookChannels(workspaceId).then(data => {
-                            setConnectedFacebookChannels(data.channels || []);
+                        getConnectedChannels(workspaceId).then(data => {
+                            setConnectedChannels(data || []);
                         }).catch(console.error);
                     }
                     break;
@@ -210,21 +282,7 @@ const Settings = () => {
                 case 'error':
                     setToast({
                         type: 'error',
-                        message: 'Failed to connect Facebook. Please try again.'
-                    });
-                    break;
-
-                case 'invalid_workspace':
-                    setToast({
-                        type: 'error',
-                        message: 'Invalid workspace. Please check your workspace ID.'
-                    });
-                    break;
-
-                case 'token_failed':
-                    setToast({
-                        type: 'error',
-                        message: 'Failed to obtain Facebook token. Please try again.'
+                        message: `Failed to connect ${platformName}. Please try again.`
                     });
                     break;
 
@@ -235,27 +293,27 @@ const Settings = () => {
                     });
             }
 
-            // Clear toast after 4 seconds
             setTimeout(() => setToast(null), 4000);
 
-            // Clean up URL parameters and Facebook hash
             const cleanUrl = window.location.pathname;
             window.history.replaceState({}, '', cleanUrl);
         }
     }, [searchParams, workspaceId]);
 
-    // Check actual Facebook connection state on load
+    // Check connected state on load
     useEffect(() => {
         if (!workspaceId) return;
-        getFacebookChannels(workspaceId).then(data => {
-            const channels = data.channels || [];
-            setConnectedFacebookChannels(channels);
-            if (channels.length > 0) {
-                setIntegrations(prev => ({ ...prev, facebook: true }));
-            } else {
-                setIntegrations(prev => ({ ...prev, facebook: false }));
-            }
-        }).catch(err => console.error("Failed to load FB channels", err));
+        getConnectedChannels(workspaceId).then(data => {
+            const list = data || [];
+            setConnectedChannels(list);
+            setIntegrations(prev => ({
+                ...prev,
+                facebook: list.some(c => c.platform === 'facebook'),
+                instagram: list.some(c => c.platform === 'instagram'),
+                linkedin: list.some(c => c.platform === 'linkedin'),
+                twitter: list.some(c => c.platform === 'twitter')
+            }));
+        }).catch(err => console.error("Failed to load connected channels", err));
     }, [workspaceId]);
 
     const handleUpdateWorkspace = async () => {
@@ -290,6 +348,32 @@ const Settings = () => {
         }
     };
 
+    const handleLogoChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            setToast({ type: 'error', message: 'File is too large. Max size of 2MB.' });
+            setTimeout(() => setToast(null), 3000);
+            return;
+        }
+        setLogoLoading(true);
+        try {
+            const data = await uploadWorkspaceLogo(workspaceId, file);
+            setWorkspaceLogo(data.logo);
+            setToast({ type: 'success', message: 'Workspace logo uploaded successfully!' });
+        } catch (err) {
+            console.error('Failed to upload logo:', err);
+            setToast({ type: 'error', message: err.message || 'Failed to upload logo' });
+        } finally {
+            setLogoLoading(false);
+            setTimeout(() => setToast(null), 3000);
+        }
+    };
+
+    const toggleWorkspaceNotification = (key) => {
+        setWorkspaceNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
     const navStyle = (id) => ({
         display: 'flex',
         alignItems: 'center',
@@ -310,8 +394,8 @@ const Settings = () => {
     return (
         <DashboardLayout>
             <div style={{ marginBottom: '2rem' }}>
-                <h1 className="text-h1">Settings</h1>
-                <p className="text-muted">Manage workspace configuration.</p>
+                <h1 className="text-h1">Workspace Settings</h1>
+                <p className="text-muted">Manage workspace configuration, integrations, permissions, and danger zone.</p>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '2rem', alignItems: 'start' }}>
@@ -333,146 +417,17 @@ const Settings = () => {
                             onClick={() => setActiveTab(id)}
                             style={navStyle(id)}
                         >
-                            <Icon size={18} />
+                            {React.createElement(Icon, { size: 18 })}
                             {label}
                         </button>
                     ))}
                 </nav>
 
                 <div style={{ minWidth: 0 }}>
-                    {activeTab === 'profile' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <Card>
-                                <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Public Profile</h3>
-                                <div style={{ display: 'grid', gap: '2rem' }}>
-                                    {/* Avatar Section */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-                                        <div style={{ position: 'relative' }}>
-                                            <div className="avatar avatar-xl" style={{
-                                                width: 100,
-                                                height: 100,
-                                                borderRadius: '50%',
-                                                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                color: 'white',
-                                                fontSize: '2rem',
-                                                fontWeight: 600,
-                                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
-                                            }}>
-                                                {profile.firstName[0]}{profile.lastName[0]}
-                                            </div>
-                                            <button style={{
-                                                position: 'absolute',
-                                                bottom: 0,
-                                                right: 0,
-                                                width: 32,
-                                                height: 32,
-                                                borderRadius: '50%',
-                                                background: 'white',
-                                                border: '1px solid var(--input-border)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                            }}>
-                                                <Camera size={16} color="var(--text-muted)" />
-                                            </button>
-                                        </div>
-                                        <div>
-                                            <h4 style={{ fontWeight: 600, marginBottom: '0.25rem' }}>Profile Picture</h4>
-                                            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>JPG, GIF or PNG. Max size of 2MB.</p>
-                                            <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                                <Button variant="outline" style={{ fontSize: '0.85rem' }}>Upload New</Button>
-                                                <Button variant="ghost" style={{ fontSize: '0.85rem', color: '#dc2626' }}>Remove</Button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Form Grid */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                        <div>
-                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>First name</label>
-                                            <input
-                                                className="input"
-                                                type="text"
-                                                value={profile.firstName}
-                                                onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Last name</label>
-                                            <input
-                                                className="input"
-                                                type="text"
-                                                value={profile.lastName}
-                                                onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Phone number</label>
-                                            <input
-                                                className="input"
-                                                type="tel"
-                                                value={profile.phone}
-                                                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                                                style={{ width: '100%' }}
-                                                placeholder="+1 (555) 000-0000"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Date of Birth</label>
-                                            <input
-                                                className="input"
-                                                type="date"
-                                                value={profile.dob}
-                                                onChange={(e) => setProfile({ ...profile, dob: e.target.value })}
-                                                style={{ width: '100%' }}
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Gender</label>
-                                            <select
-                                                className="themed-select"
-                                                value={profile.gender}
-                                                onChange={(e) => setProfile({ ...profile, gender: e.target.value })}
-                                                style={{ width: '100%' }}
-                                            >
-                                                <option value="Male">Male</option>
-                                                <option value="Female">Female</option>
-                                                <option value="Other">Other</option>
-                                                <option value="Prefer not to say">Prefer not to say</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Email Address</label>
-                                            <input
-                                                className="input"
-                                                type="email"
-                                                value={profile.email}
-                                                readOnly
-                                                style={{ width: '100%', background: 'rgba(0,0,0,0.03)', cursor: 'not-allowed' }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div style={{ paddingTop: '1.5rem', borderTop: '1px solid var(--input-border)', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                                        <Button variant="ghost">Cancel</Button>
-                                        <Button variant="primary">Save Changes</Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        </div>
-                    )}
-
                     {activeTab === 'workspace' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <Card>
-                                <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Workspace</h3>
+                                <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>General Settings</h3>
                                 <div style={{ display: 'grid', gap: '1.25rem' }}>
                                     <div>
                                         <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem', color: 'var(--text-main)' }}>Workspace name</label>
@@ -503,8 +458,30 @@ const Settings = () => {
                                     <div>
                                         <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Logo</label>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                            <div className="avatar avatar-lg" style={{ background: '#e0e7ff', width: 64, height: 64, borderRadius: 'var(--radius-md)' }} />
-                                            <Button variant="outline" style={{ fontSize: '0.9rem' }}>Upload logo</Button>
+                                            {workspaceLogo ? (
+                                                <img src={workspaceLogo} alt="Logo" style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
+                                            ) : (
+                                                <div className="avatar avatar-lg" style={{ background: '#e0e7ff', width: 64, height: 64, borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--color-primary)' }}>
+                                                    {workspaceName[0]?.toUpperCase() || 'W'}
+                                                </div>
+                                            )}
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                style={{ fontSize: '0.9rem' }}
+                                                onClick={() => document.getElementById('logo-file-input').click()}
+                                                disabled={logoLoading}
+                                            >
+                                                {logoLoading ? <Loader2 className="animate-spin" size={16} /> : 'Upload logo'}
+                                            </Button>
+                                            <input
+                                                id="logo-file-input"
+                                                type="file"
+                                                style={{ display: 'none' }}
+                                                accept="image/*"
+                                                onChange={handleLogoChange}
+                                                disabled={logoLoading}
+                                            />
                                         </div>
                                     </div>
                                     <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--input-border)', display: 'flex', justifyContent: 'flex-end' }}>
@@ -531,7 +508,7 @@ const Settings = () => {
                                     </div>
                                     <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-md)' }}>
                                         <div className="text-muted" style={{ fontSize: '0.8rem' }}>Connected</div>
-                                        <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>3</div>
+                                        <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>{connectedChannels.length}</div>
                                     </div>
                                 </div>
                             </Card>
@@ -541,10 +518,40 @@ const Settings = () => {
                     {activeTab === 'branding' && (
                         <Card>
                             <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Branding</h3>
-                            <p className="text-muted" style={{ marginBottom: '1rem' }}>Customize workspace appearance.</p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <div className="avatar avatar-lg" style={{ background: '#e0e7ff', width: 56, height: 56, borderRadius: 'var(--radius-md)' }} />
-                                <Button variant="outline">Change logo</Button>
+                            <p className="text-muted" style={{ marginBottom: '1rem' }}>Customize workspace appearance and brand parameters.</p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                                {workspaceLogo ? (
+                                    <img src={workspaceLogo} alt="Logo" style={{ width: 56, height: 56, borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
+                                ) : (
+                                    <div className="avatar avatar-lg" style={{ background: '#e0e7ff', width: 56, height: 56, borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--color-primary)' }}>
+                                        {workspaceName[0]?.toUpperCase() || 'W'}
+                                    </div>
+                                )}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => document.getElementById('branding-logo-file-input').click()}
+                                    disabled={logoLoading}
+                                >
+                                    {logoLoading ? <Loader2 className="animate-spin" size={16} /> : 'Change logo'}
+                                </Button>
+                                <input
+                                    id="branding-logo-file-input"
+                                    type="file"
+                                    style={{ display: 'none' }}
+                                    accept="image/*"
+                                    onChange={handleLogoChange}
+                                    disabled={logoLoading}
+                                />
+                            </div>
+                            <div style={{ display: 'grid', gap: '1rem' }}>
+                                <div>
+                                    <label className="input-label-static" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500, fontSize: '0.9rem' }}>Primary Brand Color</label>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: '#6366f1', border: '1px solid var(--input-border)' }} />
+                                        <input className="input" type="text" defaultValue="#6366f1" style={{ maxWidth: '120px' }} />
+                                    </div>
+                                </div>
                             </div>
                         </Card>
                     )}
@@ -552,7 +559,7 @@ const Settings = () => {
                     {activeTab === 'roles' && (
                         <Card>
                             <h3 className="text-h3" style={{ marginBottom: '0.5rem' }}>Roles & Permissions</h3>
-                            <p className="text-muted" style={{ marginBottom: '1.5rem' }}>Permission matrix by role.</p>
+                            <p className="text-muted" style={{ marginBottom: '1.5rem' }}>Permission matrix by role for members of this workspace.</p>
                             <div style={{ overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                                     <thead>
@@ -588,7 +595,7 @@ const Settings = () => {
                                                                     transition: 'background 0.2s'
                                                                 }}
                                                             >
-                                                                <span style={{
+                                                                 <span style={{
                                                                     position: 'absolute',
                                                                     top: 2,
                                                                     left: on ? 20 : 2,
@@ -613,18 +620,29 @@ const Settings = () => {
                     {activeTab === 'integrations' && (
                         <div>
                             <h3 className="text-h3" style={{ marginBottom: '0.5rem' }}>Integrations</h3>
-                            <p className="text-muted" style={{ marginBottom: '1.5rem' }}>Connect external apps and services.</p>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '1rem' }}>
+                            <p className="text-muted" style={{ marginBottom: '1.5rem' }}>Connect external channels and apps for publishing posts and assets in this workspace.</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.5rem' }}>
                                 {INTEGRATION_APPS.map(app => {
-                                    const connected = integrations[app.id];
-                                    const AppIcon = app.id === 'facebook' ? Facebook : Plug;
+                                    const isSocial = ['facebook', 'instagram', 'linkedin', 'twitter'].includes(app.id);
+                                    const platformChannels = connectedChannels.filter(c => c.platform === app.id);
+                                    const connected = isSocial ? platformChannels.length > 0 : integrations[app.id];
+
+                                    let AppIcon = Plug;
+                                    let iconColor = 'var(--text-muted)';
+                                    if (app.id === 'facebook') { AppIcon = Facebook; iconColor = '#1877f2'; }
+                                    else if (app.id === 'instagram') { AppIcon = Instagram; iconColor = '#E1306C'; }
+                                    else if (app.id === 'linkedin') { AppIcon = Linkedin; iconColor = '#0A66C2'; }
+                                    else if (app.id === 'twitter') { AppIcon = Twitter; iconColor = '#1DA1F2'; }
 
                                     return (
                                         <Card
                                             key={app.id}
                                             style={{
                                                 padding: '1.25rem',
-                                                transition: 'transform 0.2s, box-shadow 0.2s'
+                                                transition: 'transform 0.2s, box-shadow 0.2s',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                justifyContent: 'space-between'
                                             }}
                                             onMouseEnter={(e) => {
                                                 e.currentTarget.style.transform = 'translateY(-2px)';
@@ -635,28 +653,81 @@ const Settings = () => {
                                                 e.currentTarget.style.boxShadow = '';
                                             }}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                                <AppIcon size={20} color={app.id === 'facebook' ? '#1877f2' : 'var(--text-muted)'} />
-                                                <div style={{ fontWeight: 600 }}>{app.name}</div>
+                                            <div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                                                    <AppIcon size={20} color={iconColor} />
+                                                    <div style={{ fontWeight: 600 }}>{app.name}</div>
+                                                </div>
+                                                <span style={{
+                                                    display: 'inline-block',
+                                                    fontSize: '0.75rem',
+                                                    padding: '0.2rem 0.5rem',
+                                                    borderRadius: '999px',
+                                                    background: connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.06)',
+                                                    color: connected ? '#059669' : 'var(--text-muted)',
+                                                    fontWeight: 600,
+                                                    marginBottom: '0.5rem'
+                                                }}>
+                                                    {connected ? (isSocial ? `${platformChannels.length} Linked` : 'Connected') : 'Not connected'}
+                                                </span>
+
+                                                {/* If social, list connected channels */}
+                                                {isSocial && platformChannels.length > 0 && (
+                                                    <div style={{ marginTop: '0.5rem', borderTop: '1px solid rgba(0,0,0,0.05)', paddingTop: '0.5rem' }}>
+                                                        {platformChannels.map(ch => (
+                                                            <div key={ch.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0.4rem 0', fontSize: '0.8rem' }}>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                                    <img src={ch.profile_picture || 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=150'} alt={ch.name} style={{ width: 20, height: 20, borderRadius: '50%' }} />
+                                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                        <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                                                                            {ch.name || ch.page_name}
+                                                                        </span>
+                                                                        {verificationStatuses[ch.id] && (
+                                                                            <span style={{ 
+                                                                                fontSize: '0.7rem', 
+                                                                                fontWeight: 600, 
+                                                                                color: verificationStatuses[ch.id] === 'verified' ? '#10B981' : (verificationStatuses[ch.id] === 'verifying' ? 'var(--text-muted)' : '#EF4444')
+                                                                            }}>
+                                                                                {verificationStatuses[ch.id] === 'verified' ? '● Verified' : (verificationStatuses[ch.id] === 'verifying' ? 'Verifying...' : '● Failed')}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                                    <button
+                                                                        onClick={() => handleVerifyChannel(ch.id)}
+                                                                        disabled={verificationStatuses[ch.id] === 'verifying'}
+                                                                        style={{ color: 'var(--color-primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
+                                                                    >
+                                                                        {verificationStatuses[ch.id] === 'verifying' ? 'Verifying...' : 'Verify'}
+                                                                    </button>
+                                                                    <span style={{ color: 'rgba(0,0,0,0.1)' }}>|</span>
+                                                                    <button
+                                                                        onClick={() => handleDisconnectSingleChannel(ch.id)}
+                                                                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600 }}
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-                                            <span style={{
-                                                display: 'inline-block',
-                                                fontSize: '0.75rem',
-                                                padding: '0.2rem 0.5rem',
-                                                borderRadius: '999px',
-                                                background: connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(0,0,0,0.06)',
-                                                color: connected ? '#059669' : 'var(--text-muted)',
-                                                fontWeight: 600
-                                            }}>
-                                                {connected ? 'Connected' : 'Not connected'}
-                                            </span>
-                                            <Button
-                                                variant={connected ? 'ghost' : 'outline'}
-                                                style={{ marginTop: '1rem', width: '100%', fontSize: '0.85rem' }}
-                                                onClick={() => toggleIntegration(app.id)}
-                                            >
-                                                {connected ? 'Disconnect' : 'Connect'}
-                                            </Button>
+                                            {app.id === 'facebook' ? (
+                                                <ConnectFacebookButton
+                                                    workspaceId={workspaceId}
+                                                    style={{ marginTop: '1rem', width: '100%', fontSize: '0.85rem' }}
+                                                />
+                                            ) : (
+                                                <Button
+                                                    variant={(!isSocial && connected) ? 'ghost' : 'outline'}
+                                                    style={{ marginTop: '1rem', width: '100%', fontSize: '0.85rem' }}
+                                                    onClick={() => toggleIntegration(app.id)}
+                                                >
+                                                    {isSocial ? 'Link Account' : (connected ? 'Disconnect' : 'Connect')}
+                                                </Button>
+                                            )}
                                         </Card>
                                     );
                                 })}
@@ -664,61 +735,152 @@ const Settings = () => {
                         </div>
                     )}
 
-                    {activeTab === 'security' && (
-                        <Card>
-                            <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Security</h3>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 0', borderBottom: '1px solid var(--input-border)', marginBottom: '1.5rem' }}>
-                                <div>
-                                    <div style={{ fontWeight: 600 }}>Two-factor authentication</div>
-                                    <div className="text-muted" style={{ fontSize: '0.85rem' }}>Add an extra layer of security</div>
-                                </div>
-                                <button
-                                    type="button"
-                                    role="switch"
-                                    aria-checked={twoFAEnabled}
-                                    onClick={() => setTwoFAEnabled(v => !v)}
-                                    style={{
-                                        width: 44,
-                                        height: 24,
-                                        borderRadius: 12,
-                                        border: 'none',
-                                        background: twoFAEnabled ? 'var(--color-primary)' : '#d1d5db',
-                                        cursor: 'pointer',
-                                        position: 'relative'
-                                    }}
-                                >
-                                    <span style={{
-                                        position: 'absolute',
-                                        top: 2,
-                                        left: twoFAEnabled ? 22 : 2,
-                                        width: 20,
-                                        height: 20,
-                                        borderRadius: '50%',
-                                        background: 'white',
-                                        transition: 'left 0.2s'
-                                    }} />
-                                </button>
-                            </div>
-                            <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.75rem' }}>Last login</h4>
-                            <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>Feb 10, 2026 at 2:34 PM • Windows</p>
-                            <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.75rem' }}>Active sessions</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--input-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.9rem' }}>Current session • Windows</span>
-                                    <span className="text-muted" style={{ fontSize: '0.8rem' }}>Active now</span>
-                                </div>
-                                <div style={{ padding: '1rem', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--input-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontSize: '0.9rem' }}>Chrome on Mac • Feb 8</span>
-                                    <Button variant="ghost" style={{ fontSize: '0.8rem' }}>Revoke</Button>
-                                </div>
-                            </div>
-                        </Card>
-                    )}
-
                     {activeTab === 'notifications' && (
                         <Card>
-                            <h3 className="text-h3" style={{ marginBottom: '1.5rem' }}>Notifications</h3>
-                            <p className="text-muted">Configure notification preferences.</p>
+                            <h3 className="text-h3" style={{ marginBottom: '0.5rem' }}>Workspace Alerts</h3>
+                            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '2rem' }}>Configure notification behaviors and triggers specific to this workspace.</p>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--input-border)' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600 }}>Reviewer Notifications</div>
+                                        <div className="text-muted" style={{ fontSize: '0.85rem' }}>Email review team immediately when posts are submitted for approval.</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={workspaceNotifications.notifyReviewer}
+                                        onClick={() => toggleWorkspaceNotification('notifyReviewer')}
+                                        style={{
+                                            width: 44,
+                                            height: 24,
+                                            borderRadius: 12,
+                                            border: 'none',
+                                            background: workspaceNotifications.notifyReviewer ? 'var(--color-primary)' : '#d1d5db',
+                                            cursor: 'pointer',
+                                            position: 'relative',
+                                            transition: 'background 0.2s',
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: 2,
+                                            left: workspaceNotifications.notifyReviewer ? 22 : 2,
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: '50%',
+                                            background: 'white',
+                                            transition: 'left 0.2s'
+                                        }} />
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--input-border)' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600 }}>Author Feedback</div>
+                                        <div className="text-muted" style={{ fontSize: '0.85rem' }}>Send immediate update alerts to post authors when a reviewer approves or rejects their draft.</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={workspaceNotifications.notifyAuthor}
+                                        onClick={() => toggleWorkspaceNotification('notifyAuthor')}
+                                        style={{
+                                            width: 44,
+                                            height: 24,
+                                            borderRadius: 12,
+                                            border: 'none',
+                                            background: workspaceNotifications.notifyAuthor ? 'var(--color-primary)' : '#d1d5db',
+                                            cursor: 'pointer',
+                                            position: 'relative',
+                                            transition: 'background 0.2s',
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: 2,
+                                            left: workspaceNotifications.notifyAuthor ? 22 : 2,
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: '50%',
+                                            background: 'white',
+                                            transition: 'left 0.2s'
+                                        }} />
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--input-border)' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600 }}>Integrations Disconnection Warnings</div>
+                                        <div className="text-muted" style={{ fontSize: '0.85rem' }}>Send emergency notifications if a connected social media account token expires or gets disconnected.</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={workspaceNotifications.alertOnDisconnect}
+                                        onClick={() => toggleWorkspaceNotification('alertOnDisconnect')}
+                                        style={{
+                                            width: 44,
+                                            height: 24,
+                                            borderRadius: 12,
+                                            border: 'none',
+                                            background: workspaceNotifications.alertOnDisconnect ? 'var(--color-primary)' : '#d1d5db',
+                                            cursor: 'pointer',
+                                            position: 'relative',
+                                            transition: 'background 0.2s',
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: 2,
+                                            left: workspaceNotifications.alertOnDisconnect ? 22 : 2,
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: '50%',
+                                            background: 'white',
+                                            transition: 'left 0.2s'
+                                        }} />
+                                    </button>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem' }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600 }}>Weekly Workspace Performance Reports</div>
+                                        <div className="text-muted" style={{ fontSize: '0.85rem' }}>Distribute a weekly digest of published posts and engagement insights to workspace members.</div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={workspaceNotifications.weeklyDigest}
+                                        onClick={() => toggleWorkspaceNotification('weeklyDigest')}
+                                        style={{
+                                            width: 44,
+                                            height: 24,
+                                            borderRadius: 12,
+                                            border: 'none',
+                                            background: workspaceNotifications.weeklyDigest ? 'var(--color-primary)' : '#d1d5db',
+                                            cursor: 'pointer',
+                                            position: 'relative',
+                                            transition: 'background 0.2s',
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        <span style={{
+                                            position: 'absolute',
+                                            top: 2,
+                                            left: workspaceNotifications.weeklyDigest ? 22 : 2,
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: '50%',
+                                            background: 'white',
+                                            transition: 'left 0.2s'
+                                        }} />
+                                    </button>
+                                </div>
+                            </div>
                         </Card>
                     )}
 

@@ -52,8 +52,8 @@ const Login = () => {
     return (
         <div className="login-card">
             <div className="brand-logo">
-                <div className="logo-icon">L</div>
-                <span>LintCollab</span>
+                <div className="logo-icon">A</div>
+                <span>AstraFlow.AI</span>
             </div>
 
             <div className="login-header">

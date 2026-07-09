@@ -13,7 +13,7 @@ const SignupPage = () => {
             <div className="left-panel">
                 <div className="hero-content">
                     <div className="logo-section" style={{ marginBottom: '2rem' }}>
-                        <div className="logo-icon" style={{ width: 40, height: 40, fontSize: 24 }}>L</div>
+                        <div className="logo-icon" style={{ width: 40, height: 40, fontSize: 24 }}>A</div>
                     </div>
 
                     <h1 className="hero-tagenline">

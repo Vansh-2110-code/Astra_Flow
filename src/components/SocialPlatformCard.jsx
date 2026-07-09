@@ -162,7 +162,7 @@ const SocialPlatformCard = ({ platform, onConnect, isConnected }) => {
     );
 };
 
-export const platforms = [
+const _platforms = [
     { id: 'facebook', name: 'Facebook', icon: Facebook, color: '#1877F2' },
     { id: 'instagram', name: 'Instagram', icon: Instagram, color: '#E1306C' },
     { id: 'twitter', name: 'X (Twitter)', icon: Twitter, color: '#1DA1F2' },

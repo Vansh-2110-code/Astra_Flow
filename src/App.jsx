@@ -12,6 +12,7 @@ import Media from './pages/Media';
 import Analytics from './pages/Analytics';
 import Team from './pages/Team';
 import Settings from './pages/Settings';
+import ProfileSettings from './pages/ProfileSettings';
 import { getAccessToken } from './services/authService';
 
 function App() {
@@ -72,11 +73,21 @@ function App() {
               <Settings />
             </ProtectedRoute>
           } />
+          <Route path="/workspace/:workspaceId/profile-settings" element={
+            <ProtectedRoute>
+              <ProfileSettings />
+            </ProtectedRoute>
+          } />
 
           {/* Redirect /workspaces/ (plural) to /workspace/ (singular) - for backend OAuth callbacks */}
           <Route path="/workspaces/:workspaceId/settings" element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path="/workspaces/:workspaceId/profile-settings" element={
+            <ProtectedRoute>
+              <ProfileSettings />
             </ProtectedRoute>
           } />
 

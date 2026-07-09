@@ -9,24 +9,19 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import EmojiPicker from 'emoji-picker-react';
-import { getFacebookChannels, createFacebookPost } from '../services/channelService';
+import { getConnectedChannels, createFacebookPost } from '../services/channelService';
 import PostTab from './tabs/PostTab';
 import StoryTab from './tabs/StoryTab';
 import CarouselEditView from './tabs/CarouselEditView';
 import ReelsTab from './tabs/ReelsTab';
+import AIAssistantPanel from './AIAssistantPanel';
 
-const baseConnectedApps = [
-    { id: 'Instagram', icon: Instagram, name: 'Instagram', count: 2, color: '#E1306C', accounts: [{ id: 'ig_main', handle: '@main_account', name: 'Main Account' }, { id: 'ig_inf', handle: '@inf.ogram1', name: 'inf.ogram1' }] },
-    { id: 'LinkedIn', icon: Linkedin, name: 'LinkedIn', count: 1, color: '#0A66C2', accounts: [{ id: 'li_profile', handle: '@profile1', name: 'Linked Profile' }] },
-    { id: 'Facebook', icon: Facebook, name: 'Facebook', count: 1, color: '#1877F2', accounts: [{ id: 'fb_page', handle: '@page1', name: 'FB Page' }] },
-];
-
-const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSuccess }) => {
+const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSuccess, onPostCreated, prefilledDate }) => {
     const { workspaceId } = useParams();
     const [caption, setCaption] = useState('');
     const [firstComment, setFirstComment] = useState('');
     const [postType, setPostType] = useState(initialTab);
-    const [connectedApps, setConnectedApps] = useState(baseConnectedApps);
+    const [connectedApps, setConnectedApps] = useState([]);
     const [selectedAccounts, setSelectedAccounts] = useState([]);
 
     // New UI states
@@ -39,8 +34,57 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
     const [isCarouselMode, setIsCarouselMode] = useState(false);
     const [selectedPublishAction, setSelectedPublishAction] = useState('Publish now');
     const [selectedDate, setSelectedDate] = useState(null); // Changed to null to represent "No date selected"
-    const [tempDate, setTempDate] = useState(new Date()); // Used for the calendar view when no date is selected
+    const [tempDate, setTempDate] = useState(new Date());
     const [isPublishing, setIsPublishing] = useState(false);
+    const [showAIPanel, setShowAIPanel] = useState(false);
+
+    const [hourInput, setHourInput] = useState('02');
+    const [minuteInput, setMinuteInput] = useState('03');
+
+    const updateSelectedDate = (newDate) => {
+        setSelectedDate(newDate);
+        if (newDate) {
+            const h = newDate.getHours() % 12 || 12;
+            const m = newDate.getMinutes();
+            setHourInput(h.toString().padStart(2, '0'));
+            setMinuteInput(m.toString().padStart(2, '0'));
+        } else {
+            setHourInput('02');
+            setMinuteInput('03');
+        }
+    };
+
+    const applyAISuggestion = (newCaption, newHashtags) => {
+        if (newCaption) {
+            setCaption(prev => {
+                if (prev) {
+                    return prev + '\n' + newCaption;
+                }
+                return newCaption;
+            });
+        }
+        if (newHashtags) {
+            setFirstComment(prev => {
+                if (prev) {
+                    return prev + ' ' + newHashtags;
+                }
+                return newHashtags;
+            });
+        }
+    };
+
+    useEffect(() => {
+        if (isOpen) {
+            if (prefilledDate) {
+                const dateObj = new Date(prefilledDate);
+                updateSelectedDate(dateObj);
+                setTempDate(dateObj);
+            } else {
+                updateSelectedDate(null);
+                setTempDate(new Date());
+            }
+        }
+    }, [isOpen, prefilledDate]);
 
     // Tooltip State for bottom icons
     const [hoveredTool, setHoveredTool] = useState(null);
@@ -59,42 +103,88 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
     useEffect(() => {
         if (!workspaceId) return;
 
-        getFacebookChannels(workspaceId)
-            .then(data => {
-                if (data.channels && data.channels.length > 0) {
-                    const fbAccounts = data.channels.map(ch => ({
-                        id: ch.id,
-                        handle: ch.name || ch.id,
-                        name: ch.name || ch.id
-                    }));
+        getConnectedChannels(workspaceId)
+            .then(channels => {
+                const list = channels || [];
 
-                    const dynamicFb = {
+                const fbAccounts = list.filter(ch => ch.platform === 'facebook').map(ch => ({
+                    id: ch.id,
+                    handle: ch.name || ch.id,
+                    name: ch.name || ch.id
+                }));
+
+                const igAccounts = list.filter(ch => ch.platform === 'instagram').map(ch => ({
+                    id: ch.id,
+                    handle: ch.name || ch.id,
+                    name: ch.name || ch.id
+                }));
+
+                const liAccounts = list.filter(ch => ch.platform === 'linkedin').map(ch => ({
+                    id: ch.id,
+                    handle: ch.name || ch.id,
+                    name: ch.name || ch.id
+                }));
+
+                const twAccounts = list.filter(ch => ch.platform === 'twitter').map(ch => ({
+                    id: ch.id,
+                    handle: ch.name || ch.id,
+                    name: ch.name || ch.id
+                }));
+
+                const activeApps = [];
+
+                if (igAccounts.length > 0) {
+                    activeApps.push({
+                        id: 'Instagram',
+                        icon: Instagram,
+                        name: 'Instagram',
+                        count: igAccounts.length,
+                        color: '#E1306C',
+                        accounts: igAccounts
+                    });
+                }
+                if (liAccounts.length > 0) {
+                    activeApps.push({
+                        id: 'LinkedIn',
+                        icon: Linkedin,
+                        name: 'LinkedIn',
+                        count: liAccounts.length,
+                        color: '#0A66C2',
+                        accounts: liAccounts
+                    });
+                }
+                if (twAccounts.length > 0) {
+                    activeApps.push({
+                        id: 'Twitter',
+                        icon: Twitter,
+                        name: 'X (Twitter)',
+                        count: twAccounts.length,
+                        color: '#1DA1F2',
+                        accounts: twAccounts
+                    });
+                }
+                if (fbAccounts.length > 0) {
+                    activeApps.push({
                         id: 'Facebook',
                         icon: Facebook,
                         name: 'Facebook',
                         count: fbAccounts.length,
                         color: '#1877F2',
                         accounts: fbAccounts
-                    };
-
-                    const newApps = baseConnectedApps.filter(app => app.id !== 'Facebook');
-                    newApps.splice(1, 0, dynamicFb);
-                    setConnectedApps(newApps);
-
-                    // Auto-select the first Facebook account if none are selected
-                    setSelectedAccounts(prev => {
-                        if (prev.length === 0 || (prev.length === 1 && prev[0].startsWith('Instagram'))) {
-                            return [`Facebook-${fbAccounts[0].id}`];
-                        }
-                        return prev;
                     });
-                } else {
-                    setConnectedApps(baseConnectedApps);
+                }
+
+                setConnectedApps(activeApps);
+
+                // Auto-select the first account if none are selected
+                if (activeApps.length > 0) {
+                    const firstApp = activeApps[0];
+                    setSelectedAccounts([`${firstApp.id}-${firstApp.accounts[0].id}`]);
                 }
             })
             .catch(err => {
-                console.error("Failed to load Facebook channels for Modal:", err);
-                setConnectedApps(baseConnectedApps);
+                console.error("Failed to load connected channels for Modal:", err);
+                setConnectedApps([]);
             });
     }, [workspaceId]);
 
@@ -160,25 +250,28 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
 
         setIsPublishing(true);
 
-        const fbAppInfo = connectedApps.find(app => app.id === 'Facebook');
-        if (!fbAppInfo) {
-            console.log("No Facebook API context found.");
-            setIsPublishing(false);
-            return;
-        }
+        const selectedChannelDetails = [];
+        connectedApps.forEach(app => {
+            app.accounts.forEach(acc => {
+                const accountId = `${app.id}-${acc.id}`;
+                if (selectedAccounts.includes(accountId)) {
+                    selectedChannelDetails.push({
+                        platform: app.id,
+                        channelId: acc.id
+                    });
+                }
+            });
+        });
 
-        const selectedFbAccountIds = fbAppInfo.accounts
-            .filter(acc => selectedAccounts.includes(`Facebook-${acc.id}`))
-            .map(acc => acc.id);
-
-        if (selectedFbAccountIds.length === 0) {
-            alert("No Facebook accounts selected. Please click on a Facebook account icon above to select it.");
+        if (selectedChannelDetails.length === 0) {
+            alert("No social media accounts selected. Please click on an account icon above to select it.");
             setIsPublishing(false);
             return;
         }
 
         try {
-            for (const fbChannelId of selectedFbAccountIds) {
+            let lastCreatedPost = null;
+            for (const { channelId } of selectedChannelDetails) {
                 // Spec 4 Integration:
                 // - post_type: "text" for text, "image" for ANY media (Spec 4.2-4.4)
                 const hasMedia = uploadedMedia.length > 0;
@@ -218,7 +311,8 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                     }
                 }
 
-                await createFacebookPost(fbChannelId, payload);
+                const createdPost = await createFacebookPost(channelId, payload);
+                lastCreatedPost = createdPost;
             }
             // Success reset
             setCaption('');
@@ -227,7 +321,7 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
             setIsCarouselMode(false);
 
             // Show toast message based on action
-            if (selectedPublishAction === 'Schedule') {
+            if (selectedDate) {
                 toast.success('Post scheduled successfully!');
             } else if (selectedPublishAction === 'Save draft') {
                 toast.success('Draft saved successfully!');
@@ -237,13 +331,17 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
             // Close the compose modal via its prop
             onClose();
 
+            if (lastCreatedPost && onPostCreated) {
+                onPostCreated(lastCreatedPost);
+            }
+
             // Trigger refresh in parent if callback exists
             if (onPublishSuccess) {
                 onPublishSuccess();
             }
         } catch (error) {
             console.error("Failed to publish post:", error.response?.data || error);
-            const errMsg = error.response?.data?.error || error.response?.data?.detail || "Please try again.";
+            const errMsg = error.response?.data?.error || error.response?.data?.detail || error.message || "Please try again.";
             alert(`Error publishing: ${errMsg}`);
         } finally {
             setIsPublishing(false);
@@ -258,6 +356,106 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
         if (!date) return null;
         const options = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
         return date.toLocaleDateString('en-US', options).replace(',', '');
+    };
+
+    const adjustTime = (hoursDiff, minutesDiff) => {
+        const base = new Date(selectedDate || tempDate);
+        if (!selectedDate) {
+            base.setHours(14, 3, 0); // start at default 02:03 PM
+        }
+        if (hoursDiff !== 0) {
+            base.setHours(base.getHours() + hoursDiff);
+        }
+        if (minutesDiff !== 0) {
+            base.setMinutes(base.getMinutes() + minutesDiff);
+        }
+        updateSelectedDate(base);
+    };
+
+    const handleHourChange = (val) => {
+        const clean = val.replace(/[^0-9]/g, '').slice(0, 2);
+        setHourInput(clean);
+
+        if (clean !== '') {
+            let h = parseInt(clean, 10);
+            if (!isNaN(h)) {
+                if (h >= 1 && h <= 12) {
+                    const base = new Date(selectedDate || tempDate);
+                    if (!selectedDate) base.setHours(14, 3, 0);
+                    const isPm = base.getHours() >= 12;
+                    if (isPm) {
+                        base.setHours(h === 12 ? 12 : h + 12);
+                    } else {
+                        base.setHours(h === 12 ? 0 : h);
+                    }
+                    setSelectedDate(base);
+                }
+            }
+        }
+    };
+
+    const handleHourBlur = () => {
+        let h = parseInt(hourInput, 10);
+        if (isNaN(h) || h < 1) h = 12;
+        if (h > 12) h = 12;
+        
+        const formatted = h.toString().padStart(2, '0');
+        setHourInput(formatted);
+
+        const base = new Date(selectedDate || tempDate);
+        if (!selectedDate) base.setHours(14, 3, 0);
+        const isPm = base.getHours() >= 12;
+        if (isPm) {
+            base.setHours(h === 12 ? 12 : h + 12);
+        } else {
+            base.setHours(h === 12 ? 0 : h);
+        }
+        setSelectedDate(base);
+    };
+
+    const handleMinuteChange = (val) => {
+        const clean = val.replace(/[^0-9]/g, '').slice(0, 2);
+        setMinuteInput(clean);
+
+        if (clean !== '') {
+            let m = parseInt(clean, 10);
+            if (!isNaN(m)) {
+                if (m >= 0 && m <= 59) {
+                    const base = new Date(selectedDate || tempDate);
+                    if (!selectedDate) base.setHours(14, 3, 0);
+                    base.setMinutes(m);
+                    setSelectedDate(base);
+                }
+            }
+        }
+    };
+
+    const handleMinuteBlur = () => {
+        let m = parseInt(minuteInput, 10);
+        if (isNaN(m) || m < 0) m = 0;
+        if (m > 59) m = 59;
+
+        const formatted = m.toString().padStart(2, '0');
+        setMinuteInput(formatted);
+
+        const base = new Date(selectedDate || tempDate);
+        if (!selectedDate) base.setHours(14, 3, 0);
+        base.setMinutes(m);
+        setSelectedDate(base);
+    };
+
+    const toggleAmPm = () => {
+        const base = new Date(selectedDate || tempDate);
+        if (!selectedDate) {
+            base.setHours(14, 3, 0); // start at default 02:03 PM
+        }
+        const currentHours = base.getHours();
+        if (currentHours >= 12) {
+            base.setHours(currentHours - 12);
+        } else {
+            base.setHours(currentHours + 12);
+        }
+        updateSelectedDate(base);
     };
 
     if (!isOpen) return null;
@@ -586,14 +784,26 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                             {/* AI Generate Caption Feature */}
                             {!showFirstComment && (
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '16px', alignItems: 'center' }}>
-                                    <button style={{
-                                        display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 14px', border: '1px solid #e5e7eb',
-                                        borderRadius: '20px', fontSize: '13px', fontWeight: 600, color: '#6366f1', background: 'white', cursor: 'pointer'
-                                    }}>
+                                    <button 
+                                        onClick={() => setShowAIPanel(true)}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 14px', border: '1px solid #cbd5e1',
+                                            borderRadius: '20px', fontSize: '13px', fontWeight: 600, color: '#6366f1', background: 'white', cursor: 'pointer',
+                                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)', transition: 'all 0.15s'
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = '#f5f3ff'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = 'white'; }}
+                                    >
                                         <Sparkles size={14} strokeWidth={2} /> {uploadedMedia.length > 0 ? "Generate caption for image" : "Generate with AI"}
                                     </button>
                                     {!uploadedMedia.length && (
-                                        <div style={{ width: '32px', height: '32px', border: '1px solid #e5e7eb', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280' }} title="AI suggestions">
+                                        <div 
+                                            onClick={() => setShowAIPanel(true)}
+                                            style={{ width: '32px', height: '32px', border: '1px solid #e5e7eb', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6b7280', transition: 'all 0.15s' }} 
+                                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#eab308'; e.currentTarget.style.color = '#eab308'; e.currentTarget.style.background = '#fef9c3'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.background = 'transparent'; }}
+                                            title="AI suggestions"
+                                        >
                                             <Lightbulb size={16} strokeWidth={1.5} />
                                         </div>
                                     )}
@@ -809,11 +1019,21 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                                             <ChevronLeft size={16} /><ChevronLeft size={16} style={{ marginLeft: '-12px' }} />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <ChevronLeft size={16} color="#9ca3af" cursor="pointer" />
+                                            <ChevronLeft
+                                                size={16}
+                                                color="#9ca3af"
+                                                cursor="pointer"
+                                                onClick={() => setTempDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                                            />
                                             <span style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>
                                                 {monthNames[currMonth]} {currYear}
                                             </span>
-                                            <ChevronRight size={16} color="#9ca3af" cursor="pointer" />
+                                            <ChevronRight
+                                                size={16}
+                                                color="#9ca3af"
+                                                cursor="pointer"
+                                                onClick={() => setTempDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                                            />
                                         </div>
                                         <div style={{ display: 'flex', gap: '10px', color: '#d1d5db' }}>
                                             <ChevronRight size={16} /><ChevronRight size={16} style={{ marginLeft: '-12px' }} />
@@ -836,7 +1056,7 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                                                         } else {
                                                             newDate.setHours(14, 3, 0); // Default 02:03 PM
                                                         }
-                                                        setSelectedDate(newDate);
+                                                        updateSelectedDate(newDate);
                                                     }}
                                                     style={{
                                                         padding: '6px 0', fontSize: '13px',
@@ -867,12 +1087,12 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                                         <div onClick={() => {
                                             const next = new Date(selectedDate || tempDate);
                                             next.setHours(14, 3, 0); // 02:03 PM
-                                            setSelectedDate(next);
+                                            updateSelectedDate(next);
                                         }} style={{ padding: '6px 12px', border: '1px solid #3b82f6', borderRadius: '20px', fontSize: '13px', fontWeight: 600, color: '#3b82f6', cursor: 'pointer' }}>02:03 PM</div>
                                         <div onClick={() => {
                                             const next = new Date(selectedDate || tempDate);
                                             next.setHours(20, 4, 0); // 08:04 PM
-                                            setSelectedDate(next);
+                                            updateSelectedDate(next);
                                         }} style={{ padding: '6px 12px', border: '1px solid #e5e7eb', borderRadius: '20px', fontSize: '13px', fontWeight: 600, color: '#4b5563', cursor: 'pointer' }}>08:04 PM</div>
                                     </div>
 
@@ -896,18 +1116,36 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
 
                                     {/* Custom Time Input below chart */}
                                     <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                                        <div style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '6px', padding: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600, color: '#4b5563' }}>
-                                            {selectedDate ? (selectedDate.getHours() % 12 || 12).toString().padStart(2, '0') : '02'}
-                                            <div style={{ display: 'flex', flexDirection: 'column', color: '#9ca3af' }}><ChevronDown size={10} style={{ transform: 'rotate(180deg)' }} /><ChevronDown size={10} /></div>
-                                        </div>
-                                        <div style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '6px', padding: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600, color: '#4b5563' }}>
-                                            {selectedDate ? selectedDate.getMinutes().toString().padStart(2, '0') : '03'}
-                                            <div style={{ display: 'flex', flexDirection: 'column', color: '#9ca3af' }}><ChevronDown size={10} style={{ transform: 'rotate(180deg)' }} /><ChevronDown size={10} /></div>
-                                        </div>
-                                        <div style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '6px', padding: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600, color: '#4b5563' }}>
-                                            {selectedDate ? (selectedDate.getHours() >= 12 ? 'PM' : 'AM') : 'PM'}
-                                            <ChevronDown size={12} color="#9ca3af" />
-                                        </div>
+                                         <div style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', background: 'white' }}>
+                                             <input
+                                                 type="text"
+                                                 value={hourInput}
+                                                 onChange={(e) => handleHourChange(e.target.value)}
+                                                 onBlur={handleHourBlur}
+                                                 style={{ width: '28px', border: 'none', outline: 'none', fontWeight: 600, color: '#4b5563', padding: 0 }}
+                                             />
+                                             <div style={{ display: 'flex', flexDirection: 'column', color: '#9ca3af', justifyContent: 'center' }}>
+                                                <ChevronDown size={10} style={{ transform: 'rotate(180deg)', cursor: 'pointer', padding: '2px' }} onClick={() => adjustTime(1, 0)} />
+                                                <ChevronDown size={10} style={{ cursor: 'pointer', padding: '2px' }} onClick={() => adjustTime(-1, 0)} />
+                                             </div>
+                                         </div>
+                                         <div style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px', background: 'white' }}>
+                                             <input
+                                                 type="text"
+                                                 value={minuteInput}
+                                                 onChange={(e) => handleMinuteChange(e.target.value)}
+                                                 onBlur={handleMinuteBlur}
+                                                 style={{ width: '28px', border: 'none', outline: 'none', fontWeight: 600, color: '#4b5563', padding: 0 }}
+                                             />
+                                             <div style={{ display: 'flex', flexDirection: 'column', color: '#9ca3af', justifyContent: 'center' }}>
+                                                <ChevronDown size={10} style={{ transform: 'rotate(180deg)', cursor: 'pointer', padding: '2px' }} onClick={() => adjustTime(0, 1)} />
+                                                <ChevronDown size={10} style={{ cursor: 'pointer', padding: '2px' }} onClick={() => adjustTime(0, -1)} />
+                                             </div>
+                                         </div>
+                                         <div onClick={toggleAmPm} style={{ flex: 1, border: '1px solid #e5e7eb', borderRadius: '6px', padding: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', fontWeight: 600, color: '#4b5563', cursor: 'pointer', background: 'white' }}>
+                                             {selectedDate ? (selectedDate.getHours() >= 12 ? 'PM' : 'AM') : 'PM'}
+                                             <ChevronDown size={12} color="#9ca3af" />
+                                         </div>
                                     </div>
                                 </div>
                             </div>
@@ -957,6 +1195,18 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                         </div>
                     )}
                 </div>
+                
+                {/* AI Assistant Side Panel */}
+                {showAIPanel && (
+                    <AIAssistantPanel
+                        onClose={() => setShowAIPanel(false)}
+                        uploadedMedia={uploadedMedia}
+                        currentMediaIndex={currentMediaIndex}
+                        applySuggestion={applyAISuggestion}
+                        showFirstComment={showFirstComment}
+                        setShowFirstComment={setShowFirstComment}
+                    />
+                )}
             </div>
         </div>
     );

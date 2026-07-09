@@ -4,6 +4,7 @@ import Card from './ui/Card';
 import Button from './ui/Button';
 import { X, Plus, Trash2, Globe, ArrowRight, Loader2, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+// eslint-disable-next-line no-unused-vars
 import { AnimatePresence, motion } from 'framer-motion';
 import { createWorkspace, inviteToWorkspace } from '../services/workspaceService';
 
@@ -422,7 +423,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onCreated }) => {
             try {
                 const result = await createWorkspace(name.trim(), timezone);
                 console.log('Workspace created:', result);
-                setCreatedWorkspaceId(result.data.id);
+                setCreatedWorkspaceId(result.id || result.data?.id);
                 setStep(2);
             } catch (err) {
                 console.error('Workspace creation failed:', err);

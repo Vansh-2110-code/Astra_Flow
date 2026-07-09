@@ -472,7 +472,7 @@ const CalendarView = ({ posts, onUpdatePostDate, onCreatePost }) => {
 
                                         {remainingPosts > 0 && (
                                             <button
-                                                onClick={(e) => {
+                                                onClick={() => {
                                                     setOverflowPopup({
                                                         date
                                                     });

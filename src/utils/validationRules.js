@@ -69,7 +69,7 @@ export const validateMedia = async (file, platform) => {
         }
 
         return { isValid: true, error: null };
-    } catch (err) {
+    } catch {
         // If we can't read dimensions (e.g. PDF), and it's allowed, pass it
         if (file.type === 'application/pdf' && rules.allowedFormats.includes('application/pdf')) {
             return { isValid: true, error: null };

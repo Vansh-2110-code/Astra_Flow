@@ -30,7 +30,7 @@ import {
     Box
 } from '@mui/material';
 import { getUserData } from '../../services/authService';
-import { getFacebookChannels } from '../../services/channelService';
+import { getConnectedChannels } from '../../services/channelService';
 import {
     StyledDrawer,
     SidebarWrapper,
@@ -78,52 +78,86 @@ const Sidebar = ({ isOpen = true, onClose }) => {
         { icon: Image, label: 'Media Library', path: `${baseUrl}/media` },
         { icon: BarChart2, label: 'Analytics', path: `${baseUrl}/analytics` },
         { icon: Users, label: 'Team', path: `${baseUrl}/team` },
-        { icon: Settings, label: 'Settings', path: `${baseUrl}/settings` },
+        { icon: Settings, label: 'Workspace Settings', path: `${baseUrl}/settings` },
     ];
 
-    const baseConnectedApps = [
-        { id: 'Instagram', icon: Instagram, name: 'Instagram', count: 2, color: '#E1306C', accounts: [{ handle: '@main_account' }, { handle: '@brand_account' }] },
-        { id: 'LinkedIn', icon: Linkedin, name: 'LinkedIn', count: 1, color: '#0A66C2', accounts: [{ handle: '@profile1' }] },
-        { id: 'Twitter', icon: Twitter, name: 'X (Twitter)', count: 2, color: '#000000', accounts: [{ handle: '@company' }, { handle: '@personal' }] },
-        { id: 'TikTok', icon: Music, name: 'TikTok', count: 1, color: '#000000', accounts: [{ handle: '@brand' }] },
-        { id: 'Pinterest', icon: LayoutGrid, name: 'Pinterest', count: 1, color: '#E60023', accounts: [{ handle: '@boards' }] },
-        { id: 'YouTube', icon: Youtube, name: 'YouTube', count: 1, color: '#FF0000', accounts: [{ handle: '@channel' }] },
-        { id: 'Slack', icon: MessageCircle, name: 'Slack', count: 1, color: '#4A154B', accounts: [{ handle: 'workspace' }] },
-        { id: 'Google', icon: Globe, name: 'Google My Business', count: 1, color: '#4285F4', accounts: [{ handle: 'Location' }] },
-    ];
-
-    const [connectedApps, setConnectedApps] = useState(baseConnectedApps);
+    const [connectedApps, setConnectedApps] = useState([]);
 
     useEffect(() => {
         if (!workspaceId) return;
 
-        getFacebookChannels(workspaceId)
-            .then(data => {
-                if (data.channels && data.channels.length > 0) {
-                    const fbAccounts = data.channels.map(ch => ({
-                        id: ch.id,
-                        handle: ch.name
-                    }));
+        getConnectedChannels(workspaceId)
+            .then(channels => {
+                const list = channels || [];
 
-                    const dynamicFb = {
+                const fbAccounts = list.filter(ch => ch.platform === 'facebook').map(ch => ({
+                    id: ch.id,
+                    handle: ch.name || ch.id
+                }));
+
+                const igAccounts = list.filter(ch => ch.platform === 'instagram').map(ch => ({
+                    id: ch.id,
+                    handle: ch.name || ch.id
+                }));
+
+                const liAccounts = list.filter(ch => ch.platform === 'linkedin').map(ch => ({
+                    id: ch.id,
+                    handle: ch.name || ch.id
+                }));
+
+                const twAccounts = list.filter(ch => ch.platform === 'twitter').map(ch => ({
+                    id: ch.id,
+                    handle: ch.name || ch.id
+                }));
+
+                const activeApps = [];
+
+                if (igAccounts.length > 0) {
+                    activeApps.push({
+                        id: 'Instagram',
+                        icon: Instagram,
+                        name: 'Instagram',
+                        count: igAccounts.length,
+                        color: '#E1306C',
+                        accounts: igAccounts
+                    });
+                }
+                if (liAccounts.length > 0) {
+                    activeApps.push({
+                        id: 'LinkedIn',
+                        icon: Linkedin,
+                        name: 'LinkedIn',
+                        count: liAccounts.length,
+                        color: '#0A66C2',
+                        accounts: liAccounts
+                    });
+                }
+                if (twAccounts.length > 0) {
+                    activeApps.push({
+                        id: 'Twitter',
+                        icon: Twitter,
+                        name: 'X (Twitter)',
+                        count: twAccounts.length,
+                        color: '#1DA1F2',
+                        accounts: twAccounts
+                    });
+                }
+                if (fbAccounts.length > 0) {
+                    activeApps.push({
                         id: 'Facebook',
                         icon: Facebook,
                         name: 'Facebook',
                         count: fbAccounts.length,
                         color: '#1877F2',
                         accounts: fbAccounts
-                    };
-
-                    const newApps = [...baseConnectedApps];
-                    newApps.splice(1, 0, dynamicFb);
-                    setConnectedApps(newApps);
-                } else {
-                    setConnectedApps(baseConnectedApps);
+                    });
                 }
+
+                setConnectedApps(activeApps);
             })
             .catch(err => {
-                console.error("Failed to load Facebook channels for Sidebar:", err);
-                setConnectedApps(baseConnectedApps);
+                console.error("Failed to load connected channels for Sidebar:", err);
+                setConnectedApps([]);
             });
     }, [workspaceId]);
 
@@ -150,9 +184,9 @@ const Sidebar = ({ isOpen = true, onClose }) => {
     const drawerContent = (
         <SidebarWrapper>
             {/* Logo */}
-            <LogoWrapper>
-                <LogoIcon>L</LogoIcon>
-                <LogoText variant="h6">LintCollab</LogoText>
+            <LogoWrapper onClick={() => navigate('/workspace')} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                <LogoIcon>A</LogoIcon>
+                <LogoText variant="h6">AstraFlow.AI</LogoText>
             </LogoWrapper>
 
             {/* Navigation */}

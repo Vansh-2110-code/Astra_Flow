@@ -1,0 +1,257 @@
+{
+  "users": [
+    {
+      "id": "user-1",
+      "email": "admin@example.com",
+      "password": "password",
+      "first_name": "Admin",
+      "last_name": "User",
+      "timezone": "UTC",
+      "phone": "+1234567890",
+      "dob": "1990-01-01",
+      "gender": "other",
+      "avatar": null
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "ws-9ac60861-611d-4421-8313-be5b7b9cf24a",
+      "name": "Sanna",
+      "timezone": "Asia/Kolkata",
+      "owner_id": "user-1",
+      "created_at": "2026-07-02T10:40:17.261Z",
+      "facebook_app_id": "mock_app_id",
+      "facebook_app_secret": "mock_app_secret",
+      "facebook_identifier": "9993523379",
+      "facebook_password": "Edu@123456"
+    },
+    {
+      "id": "ws-1e4685c1-6fde-4eca-9314-e0298e3e58b3",
+      "name": "Sampada",
+      "timezone": "Asia/Kolkata",
+      "owner_id": "user-1",
+      "created_at": "2026-07-06T11:03:55.207Z"
+    }
+  ],
+  "members": {
+    "ws-9ac60861-611d-4421-8313-be5b7b9cf24a": [
+      {
+        "id": "user-1",
+        "first_name": "Admin",
+        "last_name": "User",
+        "email": "admin@example.com",
+        "role": "owner"
+      }
+    ],
+    "ws-1e4685c1-6fde-4eca-9314-e0298e3e58b3": [
+      {
+        "id": "user-1",
+        "first_name": "Admin",
+        "last_name": "User",
+        "email": "admin@example.com",
+        "role": "owner"
+      }
+    ]
+  },
+  "channels": [
+    {
+      "id": "chan-e38f08f5-8390-4719-a7db-415bd8173907",
+      "name": "Sanna Innovations",
+      "platform": "instagram",
+      "page_name": "sannainnovations",
+      "profile_picture": "https://scontent.fidr1-1.fna.fbcdn.net/v/t51.82787-15/559211737_17846984091575824_5718691143617142321_n.jpg?_nc_cat=101&ccb=1-7&_nc_sid=7d201b&_nc_ohc=90D0s6eiKL8Q7kNvwFc5Ti5&_nc_oc=AdrQ-AMLRGbRJYAev0WEF8NI_wcKpi8RqpFVpJAktF9PHXilPJgqRlJ6aoqKrqRipe19cwIZ5evlFS-yHPktvDax&_nc_zt=23&_nc_ht=scontent.fidr1-1.fna&edm=AJdBtusEAAAA&_nc_gid=xYbgDQbjQlSdstEL5fGWBA&oh=00_AQDHf4gcsloGO2oYMPWbi-499nUKJHFmUxMEoqzGOgrtZg&oe=6A5528A9",
+      "workspace_id": "ws-9ac60861-611d-4421-8313-be5b7b9cf24a",
+      "instagram_account_id": "17841477274712391",
+      "facebook_page_id": "332489403774446",
+      "access_token": "EAAV4WV4uqKsBRZCDPN6fNSduZAqcCvMe36E7Uniep9waZBLmFtIGGchio1ZA8L0H1BqyyWjjABZBx618qfzacON0Q9MCU5A2mZBpoFiJ1UTnAjdzrwvdXHx5OZBTkI1GjyBcxRWW6tsOFHrVmekjASx2tByCnOX5iTlZBmSPwYT5otbkQdaeiOR3dNluurFWXH0DRk7LErpQ"
+    },
+    {
+      "id": "chan-46aa5207-a691-45af-9d60-b665cb2c9c5b",
+      "name": "Linked LinkedIn Profile",
+      "platform": "linkedin",
+      "page_name": "My Professional Network Profile",
+      "profile_picture": "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150",
+      "workspace_id": "ws-1e4685c1-6fde-4eca-9314-e0298e3e58b3"
+    },
+    {
+      "id": "chan-9129e726-31b9-47fe-8ad4-2389fe880b64",
+      "name": "Linked X/Twitter Profile",
+      "platform": "twitter",
+      "page_name": "My X Profile",
+      "profile_picture": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150",
+      "workspace_id": "ws-1e4685c1-6fde-4eca-9314-e0298e3e58b3"
+    },
+    {
+      "id": "chan-38b8cd45-a81c-49c8-ba8d-d0f28d3e4192",
+      "name": "Sanna Innovations",
+      "platform": "facebook",
+      "page_name": "Sanna Innovations",
+      "profile_picture": "https://scontent.fidr1-1.fna.fbcdn.net/v/t39.30808-1/299122544_426740432810724_4819515690851530181_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=108&ccb=1-7&_nc_sid=f907e8&_nc_ohc=b-i3b4FdZ0cQ7kNvwEruSeN&_nc_oc=Adp7_PQqEs3nfhByD8Jt-dfaPVVU0JjpM7MSKdcS0C9a_rtdAS3A-RAudgO4mrZ_AF7a2cv7BNDg0WnGlwmV84cS&_nc_zt=24&_nc_ht=scontent.fidr1-1.fna&edm=AOf6bZoEAAAA&_nc_gid=SC0gMJRocuwqrxeiF3f1yg&_nc_tpa=Q5bMBQH1OwOY0gpWSA30l-z4EJT2jVgZ05AMI2wN8lAZpGPr5qH2htGJ7Xqp6VTVXDPCh07jE4q8sc6T3w&oh=00_AQA6vxzIFV7fOVUEJvHTgHoeYei_KTOZ5gNE-qSPH6Qctg&oe=6A55352A",
+      "workspace_id": "ws-9ac60861-611d-4421-8313-be5b7b9cf24a",
+      "facebook_page_id": "332489403774446",
+      "access_token": "EAAV4WV4uqKsBRZCDPN6fNSduZAqcCvMe36E7Uniep9waZBLmFtIGGchio1ZA8L0H1BqyyWjjABZBx618qfzacON0Q9MCU5A2mZBpoFiJ1UTnAjdzrwvdXHx5OZBTkI1GjyBcxRWW6tsOFHrVmekjASx2tByCnOX5iTlZBmSPwYT5otbkQdaeiOR3dNluurFWXH0DRk7LErpQ"
+    }
+  ],
+  "posts": {
+    "chan-ae0c9110-fba3-41a7-901e-e1b86e75a813": [
+      {
+        "id": "post-db3b67b7-03b1-49e3-b938-a8af713e7277",
+        "message": "",
+        "scheduled_time": null,
+        "status": "published",
+        "approved": true,
+        "approvedBy": [
+          "Admin"
+        ],
+        "created_at": "2026-07-09T06:16:51.687Z",
+        "media": [
+          "http://localhost:8000/uploads/1783577810625-WhatsApp Image 2026-07-09 at 10.51.09 AM.jpeg"
+        ],
+        "comments": [],
+        "facebook_post_id": "mock_fb_cc501a2a-67a4-41b3-9712-20fb3bd7dd35"
+      },
+      {
+        "id": "post-b1a6f9a2-a05a-4b3d-926a-95e84054f4ba",
+        "message": "Have a business? We have the strategy to help it grow.\r\nLet's turn your ideas into measurable results.\r\n\r\n(business strategy, digital marketing, business growth, branding, SEO services, social media marketing, Sanna Innovations)\r\n\r\n#BusinessGrowth #DigitalMarketing #BusinessStrategy #Branding #SEO #SocialMediaMarketing #SannaInnovations #MarketingAgency #GrowYourBusiness #DigitalSolutions",
+        "scheduled_time": "2026-07-09T05:50:00Z",
+        "status": "scheduled",
+        "approved": false,
+        "approvedBy": [],
+        "created_at": "2026-07-09T05:48:57.691Z",
+        "media": [
+          "http://localhost:8000/uploads/1783576137680-WhatsApp Image 2026-07-09 at 10.51.09 AM.jpeg"
+        ],
+        "comments": [],
+        "facebook_post_id": null
+      }
+    ],
+    "chan-e38f08f5-8390-4719-a7db-415bd8173907": [
+      {
+        "id": "post-c8e6aa6a-485e-4395-a501-e4d431ce4464",
+        "message": "Have a business? We have the strategy to help it grow.\r\nLet's turn your ideas into measurable results.\r\n\r\n(business strategy, digital marketing, business growth, branding, SEO services, social media marketing, Sanna Innovations)\r\n\r\n#BusinessGrowth #DigitalMarketing #BusinessStrategy #Branding #SEO #SocialMediaMarketing #SannaInnovations #MarketingAgency #GrowYourBusiness #DigitalSolutions",
+        "scheduled_time": null,
+        "status": "published",
+        "approved": true,
+        "approvedBy": [
+          "Admin"
+        ],
+        "created_at": "2026-07-06T11:21:54.926Z",
+        "media": [
+          "http://localhost:8000/uploads/1783336902167-WhatsApp Image 2026-07-06 at 16.11.44.jpeg"
+        ],
+        "comments": [],
+        "facebook_post_id": "18068686166456411"
+      }
+    ],
+    "chan-220b3a2a-1d34-4002-aae0-e5e75285fc09": [
+      {
+        "id": "post-809eac86-5567-407e-aa81-f0ece9fd459c",
+        "message": "Hello World! This is a test post for LinkedIn.",
+        "scheduled_time": null,
+        "status": "published",
+        "approved": true,
+        "approvedBy": [
+          "Admin"
+        ],
+        "created_at": "2026-07-07T05:18:11.955Z",
+        "media": [],
+        "comments": [],
+        "facebook_post_id": null
+      }
+    ],
+    "chan-fded43b1-659c-4a54-b9a0-8ddcbe7ad662": [
+      {
+        "id": "post-f8d2fea4-e39a-4e1e-8937-962ea1df4522",
+        "message": "Hello World! This is a test post for LinkedIn.",
+        "scheduled_time": null,
+        "status": "published",
+        "approved": true,
+        "approvedBy": [
+          "Admin"
+        ],
+        "created_at": "2026-07-07T05:18:12.052Z",
+        "media": [],
+        "comments": [],
+        "facebook_post_id": null
+      }
+    ],
+    "chan-46aa5207-a691-45af-9d60-b665cb2c9c5b": [
+      {
+        "id": "post-a196c011-038f-4a74-b4ea-7dd19d044b84",
+        "message": "Hello world, this is a cross-platform post for LinkedIn and X!",
+        "scheduled_time": null,
+        "status": "published",
+        "approved": true,
+        "approvedBy": [
+          "Admin"
+        ],
+        "created_at": "2026-07-07T05:31:44.744Z",
+        "media": [],
+        "comments": [],
+        "facebook_post_id": null
+      }
+    ],
+    "chan-9129e726-31b9-47fe-8ad4-2389fe880b64": [
+      {
+        "id": "post-7228735a-8e18-4234-b9b5-8560a551a58b",
+        "message": "Hello world, this is a cross-platform post for LinkedIn and X!",
+        "scheduled_time": null,
+        "status": "published",
+        "approved": true,
+        "approvedBy": [
+          "Admin"
+        ],
+        "created_at": "2026-07-07T05:31:44.799Z",
+        "media": [],
+        "comments": [],
+        "facebook_post_id": null
+      }
+    ],
+    "chan-38b8cd45-a81c-49c8-ba8d-d0f28d3e4192": [
+      {
+        "id": "post-f31f6a4b-e25d-44ab-94d6-5f0772d1739e",
+        "message": "",
+        "scheduled_time": "2026-07-09T06:33:00Z",
+        "status": "scheduled",
+        "approved": false,
+        "approvedBy": [],
+        "created_at": "2026-07-09T09:31:24.526Z",
+        "media": [
+          "http://localhost:8000/uploads/1783589484520-WhatsApp Image 2026-07-09 at 10.51.09 AM.jpeg"
+        ],
+        "comments": [],
+        "facebook_post_id": null
+      },
+      {
+        "id": "post-e0a9fc04-7d4e-4f42-bd57-a44099da0136",
+        "message": "Have a business? We have the strategy to help it grow.\r\nLet's turn your ideas into measurable results.\r\n\r\n(business strategy, digital marketing, business growth, branding, SEO services, social media marketing, Sanna Innovations)\r\n\r\n#BusinessGrowth #DigitalMarketing #BusinessStrategy #Branding #SEO #SocialMediaMarketing #SannaInnovations #MarketingAgency #GrowYourBusiness #DigitalSolutions",
+        "scheduled_time": null,
+        "status": "published",
+        "approved": true,
+        "approvedBy": [
+          "Admin"
+        ],
+        "created_at": "2026-07-09T07:31:37.672Z",
+        "media": [
+          "http://localhost:8000/uploads/1783582231166-WhatsApp Image 2026-07-09 at 10.51.09 AM.jpeg"
+        ],
+        "comments": [],
+        "facebook_post_id": "1435881995229891"
+      }
+    ]
+  },
+  "media": {
+    "ws-9ac60861-611d-4421-8313-be5b7b9cf24a": [
+      {
+        "id": "1783574114812-Nexora ATS png.png",
+        "name": "Nexora ATS png.png",
+        "type": "image",
+        "url": "http://localhost:8000/uploads/1783574114812-Nexora ATS png.png",
+        "platform": "library",
+        "channelName": "Library Upload",
+        "created_at": "2026-07-09T05:15:14.834Z",
+        "size": "1.9 MB"
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "lintcollab-backend",
+  "version": "1.0.0",
+  "description": "Mock Local REST API backend for LintCollab Web",
+  "main": "server.js",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "facebook-nodejs-business-sdk": "^24.0.1",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^9.0.1"
+  }
+}

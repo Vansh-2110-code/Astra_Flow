@@ -6,7 +6,7 @@ import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
 import { Plus, Loader2, AlertTriangle, Check } from 'lucide-react';
 import { getWorkspaces, deleteWorkspace } from '../services/workspaceService';
 
-const FAVORITES_KEY = 'lintcollab_favorite_workspaces';
+const FAVORITES_KEY = 'astraflow_favorite_workspaces';
 const getFavorites = () => {
     try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch { return []; }
 };

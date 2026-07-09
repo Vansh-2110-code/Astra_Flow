@@ -1,0 +1,105 @@
+[2026-07-09T07:20:06.632Z] Token Exchange:
+Request URL: https://graph.facebook.com/v18.0/oauth/access_token
+Response: {
+  "access_token": "EAAV4WV4uqKsBRyGGEjlFR3o5Tg3ZCPPpbxekq51NZB7ZBn1IwlhA6k45qgZCAJDydnR0ZC4187sgcB2cyLNjWhqagwfXYU34jM0bxp8ojYXmAC7GFGSG1qnZBZCSrx2sAobp6sutRZC6QeBdKHVvJ35ceeODjZCwDAU54GF5fyeOkDwEoEIqbeKF66eJlQv2gDCHeMvuoVWuMl7k9SXz0NLpFkmXTQMFvITtWMZCzyj9FWeiMv3d7dZCAvdt2eh0tKY3fcdYk5ZAyK9RBz5QBZBtvulcYi0dHBf7TRxPKHxiBrIl8ToxZAU8wacA1Ka4nyikNFT6Uq0Jq3HTwZD",
+  "token_type": "bearer"
+}
+
+Token Debug Info:
+{
+  "data": {
+    "app_id": "1539700111091883",
+    "type": "USER",
+    "application": "Automatic Posting",
+    "data_access_expires_at": 1791357605,
+    "expires_at": 0,
+    "is_valid": true,
+    "issued_at": 1783581605,
+    "scopes": [
+      "pages_show_list",
+      "business_management",
+      "instagram_basic",
+      "instagram_content_publish",
+      "pages_read_engagement",
+      "pages_manage_posts",
+      "public_profile"
+    ],
+    "granular_scopes": [
+      {
+        "scope": "pages_show_list",
+        "target_ids": [
+          "1070995212762220",
+          "332489403774446"
+        ]
+      },
+      {
+        "scope": "business_management",
+        "target_ids": [
+          "2191286177814755"
+        ]
+      },
+      {
+        "scope": "instagram_basic",
+        "target_ids": [
+          "17841477274712391"
+        ]
+      },
+      {
+        "scope": "instagram_content_publish",
+        "target_ids": [
+          "17841477274712391"
+        ]
+      },
+      {
+        "scope": "pages_read_engagement",
+        "target_ids": [
+          "1070995212762220",
+          "332489403774446"
+        ]
+      },
+      {
+        "scope": "pages_manage_posts",
+        "target_ids": [
+          "1070995212762220",
+          "332489403774446"
+        ]
+      }
+    ],
+    "user_id": "122137238631058073"
+  }
+}
+
+Pages Retrieve Response:
+{
+  "data": [
+    {
+      "access_token": "EAAV4WV4uqKsBRZCDPN6fNSduZAqcCvMe36E7Uniep9waZBLmFtIGGchio1ZA8L0H1BqyyWjjABZBx618qfzacON0Q9MCU5A2mZBpoFiJ1UTnAjdzrwvdXHx5OZBTkI1GjyBcxRWW6tsOFHrVmekjASx2tByCnOX5iTlZBmSPwYT5otbkQdaeiOR3dNluurFWXH0DRk7LErpQ",
+      "category": "Web designer",
+      "category_list": [
+        {
+          "id": "187393124625179",
+          "name": "Web designer"
+        }
+      ],
+      "name": "Sanna Innovations",
+      "id": "332489403774446",
+      "tasks": [
+        "ADVERTISE",
+        "ANALYZE",
+        "CREATE_CONTENT",
+        "MESSAGING",
+        "MODERATE",
+        "MANAGE"
+      ]
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "QVFIU2luVGl5OXpqLTd1T1VRcmE5alA4T2RfNExiOXhKZA0x6NW50a0ZAiVUE4RVZAMeU0wYlZAydEdiWHd3Q3hXaEtjWjFpMHh2c1RLODctaXRzWjRSVElXUlhR",
+      "after": "QVFIU2luVGl5OXpqLTd1T1VRcmE5alA4T2RfNExiOXhKZA0x6NW50a0ZAiVUE4RVZAMeU0wYlZAydEdiWHd3Q3hXaEtjWjFpMHh2c1RLODctaXRzWjRSVElXUlhR"
+    }
+  }
+}
+
+Summary: connectedFacebookCount=1, connectedInstagramCount=1
+

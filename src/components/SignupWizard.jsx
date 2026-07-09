@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+// eslint-disable-next-line no-unused-vars
+import { AnimatePresence, motion } from 'framer-motion';
 import { Check, ArrowRight, ArrowLeft, User, Mail, Lock, Globe, AlertCircle, Eye, EyeOff } from 'lucide-react';
 // Restructured signup to 2-step flow; backend register integration
 import { registerUser } from '../services/authService';

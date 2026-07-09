@@ -95,7 +95,7 @@ const Topbar = ({ children, toggleSidebar, isSidebarOpen, drawerWidth }) => {
     const handleOpenWsMenu = (event) => setAnchorElWs(prev => prev ? null : event.currentTarget);
     const handleCloseWsMenu = () => setAnchorElWs(null);
 
-    const handleNotificationClick = (postId) => {
+    const handleNotificationClick = () => {
         if (workspaceId) {
             navigate(`/workspace/${workspaceId}/content`);
         }
@@ -129,8 +129,14 @@ const Topbar = ({ children, toggleSidebar, isSidebarOpen, drawerWidth }) => {
                             <Stack direction="row" alignItems="center" gap={theme.spacing(0.5)} sx={{ minWidth: 0, flexShrink: 0 }}>
                                 <Tooltip title="Switch Workspace">
                                     <WorkspaceSwitcherWrapper onClick={handleOpenWsMenu}>
-                                        <WorkspaceIcon>
-                                            {currentWs ? currentWs.name.charAt(0) : '?'}
+                                        <WorkspaceIcon
+                                            sx={{
+                                                backgroundImage: currentWs?.logo ? `url(${currentWs.logo})` : 'none',
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center',
+                                            }}
+                                        >
+                                            {!currentWs?.logo && (currentWs ? currentWs.name.charAt(0) : '?')}
                                         </WorkspaceIcon>
                                         {!isTablet && (
                                             <WorkspaceNameText variant="body2">
@@ -140,7 +146,7 @@ const Topbar = ({ children, toggleSidebar, isSidebarOpen, drawerWidth }) => {
                                         <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
                                     </WorkspaceSwitcherWrapper>
                                 </Tooltip>
-
+ 
                                 <Menu
                                     anchorEl={anchorElWs}
                                     open={Boolean(anchorElWs)}
@@ -162,8 +168,18 @@ const Topbar = ({ children, toggleSidebar, isSidebarOpen, drawerWidth }) => {
                                                 fontWeight: String(ws.id) === String(workspaceId) ? 600 : 400
                                             }}
                                         >
-                                            <WorkspaceIcon sx={{ width: 24, height: 24, borderRadius: 1.5, fontSize: '0.65rem' }}>
-                                                {ws.name.charAt(0)}
+                                            <WorkspaceIcon 
+                                                sx={{ 
+                                                    width: 24, 
+                                                    height: 24, 
+                                                    borderRadius: 1.5, 
+                                                    fontSize: '0.65rem',
+                                                    backgroundImage: ws.logo ? `url(${ws.logo})` : 'none',
+                                                    backgroundSize: 'cover',
+                                                    backgroundPosition: 'center',
+                                                }}
+                                            >
+                                                {!ws.logo && ws.name.charAt(0)}
                                             </WorkspaceIcon>
                                             <Typography variant="body2">{ws.name}</Typography>
                                         </MenuItem>
@@ -190,7 +206,7 @@ const Topbar = ({ children, toggleSidebar, isSidebarOpen, drawerWidth }) => {
                                     display: { xs: searchOpen ? 'none' : 'flex', sm: 'flex' },
                                     flex: 1,
                                     minWidth: 0,
-                                    overflow: 'hidden'
+                                    overflow: 'visible'
                                 }}
                             >
                                 {children}
@@ -288,11 +304,11 @@ const Topbar = ({ children, toggleSidebar, isSidebarOpen, drawerWidth }) => {
                                 </Stack>
                                 {workspaceId && (
                                     <MenuItem
-                                        onClick={() => { navigate(`/workspace/${workspaceId}/settings`); handleCloseUserMenu(); }}
+                                        onClick={() => { navigate(`/workspace/${workspaceId}/profile-settings`); handleCloseUserMenu(); }}
                                         sx={{ borderRadius: 'var(--radius-sm)', gap: 1.25 }}
                                     >
                                         <Settings size={15} />
-                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>Settings</Typography>
+                                        <Typography variant="body2" sx={{ fontWeight: 500 }}>Profile Settings</Typography>
                                     </MenuItem>
                                 )}
                                 <Divider sx={{ my: 1 }} />

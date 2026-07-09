@@ -79,3 +79,15 @@ export const updateMemberRole = (workspaceId, memberId, role) =>
 export const deleteWorkspace = (workspaceId) =>
     api.delete(`/workspaces/workspace/${workspaceId}/`).then((res) => res.data);
 
+/**
+ * Upload workspace logo.
+ * Endpoint: POST /api/workspaces/workspace/{workspaceId}/logo/
+ */
+export const uploadWorkspaceLogo = (workspaceId, file) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    return api.post(`/workspaces/workspace/${workspaceId}/logo/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(res => res.data);
+};
+

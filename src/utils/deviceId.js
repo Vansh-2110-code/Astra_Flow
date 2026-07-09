@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Key used to store the device ID in localStorage.
  */
-const DEVICE_ID_KEY = 'lintcollab_device_id';
+const DEVICE_ID_KEY = 'astraflow_device_id';
 
 /**
  * Retrieves the existing secure device ID from localStorage.

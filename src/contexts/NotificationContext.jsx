@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useState, useContext, useCallback } from 'react';
 import { mockNotifications } from '../data/mockNotifications';
 
 const NotificationContext = createContext();
@@ -12,7 +13,7 @@ export const useNotifications = () => {
 };
 
 export const NotificationProvider = ({ children }) => {
-    const [notifications, setNotifications] = useState(mockNotifications);
+    const [notifications, setNotifications] = useState([]);
     const currentUser = 'Admin'; // This should come from auth context in production
 
     const addNotification = useCallback((notification) => {

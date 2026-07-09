@@ -1,7 +1,7 @@
 // src/components/Background3D.jsx
 import React, { useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Environment, PerspectiveCamera } from '@react-three/drei';
+import { Float, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 
 const FloatingShape = ({ position, color, scale, speed, rotationSpeed }) => {
@@ -14,16 +14,12 @@ const FloatingShape = ({ position, color, scale, speed, rotationSpeed }) => {
         }
     });
 
-    const material = useMemo(() => new THREE.MeshPhysicalMaterial({
+    const material = useMemo(() => new THREE.MeshStandardMaterial({
         color: color,
-        metalness: 0.1,
-        roughness: 0.2, // Smoother for glass
-        transmission: 0.6, // Glass-like transparency
-        thickness: 1.5, // Refraction thickness
-        clearcoat: 1,
-        clearcoatRoughness: 0.1,
-        reflectivity: 0.7,
-        envMapIntensity: 1.5,
+        metalness: 0.2,
+        roughness: 0.3,
+        transparent: true,
+        opacity: 0.6,
     }), [color]);
 
     return (
@@ -46,11 +42,8 @@ const Background3DScene = () => {
         <>
             <PerspectiveCamera makeDefault position={[0, 0, 15]} fov={50} />
             <ambientLight intensity={0.5} />
-            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
+            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} />
             <pointLight position={[-10, -10, -10]} intensity={0.5} color="#ec4899" />
-
-            {/* Decorative environment reflection */}
-            <Environment preset="city" />
 
             {/* Floating Shapes Generation */}
             <group>
@@ -99,7 +92,7 @@ const Background3D = () => {
             opacity: 0.6, // Subtle
             pointerEvents: 'none' // Don't block clicks
         }}>
-            <Canvas dpr={[1, 2]}>
+            <Canvas dpr={1}>
                 <Background3DScene />
             </Canvas>
         </div>

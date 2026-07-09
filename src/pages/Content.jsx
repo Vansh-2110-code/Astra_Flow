@@ -1,7 +1,7 @@
 
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Button from '../components/ui/Button';
 import CreatePostModal from '../components/CreatePostModal';
@@ -13,13 +13,13 @@ import FeedView from '../components/views/FeedView';
 import CalendarView from '../components/views/CalendarView';
 import GridView from '../components/views/GridView';
 import ListView from '../components/views/ListView';
-import { Plus, Image, Share2, PenSquare, Facebook, ChevronDown, Rss, CalendarDays, LayoutGrid, List } from 'lucide-react';
+import { Plus, Image, Share2, PenSquare, Facebook, Instagram, Linkedin, Twitter, ChevronDown, Rss, CalendarDays, LayoutGrid, List } from 'lucide-react';
 import { Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, useMediaQuery } from '@mui/material';
 import { posts as initialPosts } from '../data/mockData';
 import { useNotifications } from '../contexts/NotificationContext';
 import MediaLibraryModal from '../components/MediaLibraryModal';
 import ShareModal from '../components/ShareModal';
-import { getFacebookPosts } from '../services/channelService';
+import { getFacebookPosts, approveFacebookPost, getChannelDetails, getConnectedChannels, deletePost } from '../services/channelService';
 
 const Content = () => {
     const { workspaceId } = useParams();
@@ -52,9 +52,11 @@ const Content = () => {
     // Close side panels automatically when resizing down to mobile
     useEffect(() => {
         if (isMobile) {
-            setIsPanelOpen(false);
-            setIsCommentsPanelOpen(false);
-            setSelectedPost(null);
+            setTimeout(() => {
+                setIsPanelOpen(false);
+                setIsCommentsPanelOpen(false);
+                setSelectedPost(null);
+            }, 0);
         }
     }, [isMobile]);
 
@@ -63,10 +65,12 @@ const Content = () => {
         if (selectedPost) {
             const upToDatePost = posts.find(p => p.id === selectedPost.id);
             if (upToDatePost && upToDatePost !== selectedPost) {
-                setSelectedPost(upToDatePost);
+                setTimeout(() => {
+                    setSelectedPost(upToDatePost);
+                }, 0);
             }
         }
-    }, [posts]);
+    }, [posts, selectedPost]);
 
     // Check for scheduled posts needing approval on mount and periodically
     useEffect(() => {
@@ -80,7 +84,7 @@ const Content = () => {
         return () => clearInterval(interval);
     }, [posts, checkScheduledPosts]);
 
-    const handleFilterClick = (status) => {
+    const _handleFilterClick = (status) => {
         const filteredPosts = getFilteredPosts().filter(post =>
             post.status.toLowerCase() === status.toLowerCase()
         );
@@ -104,11 +108,27 @@ const Content = () => {
         }
 
         if (filters.dateFrom) {
-            filtered = filtered.filter(post => new Date(post.date) >= new Date(filters.dateFrom));
+            filtered = filtered.filter(post => {
+                const dateStr = post.created_at || post.date;
+                if (!dateStr) return false;
+                const postDate = new Date(dateStr);
+                const filterDate = new Date(filters.dateFrom);
+                postDate.setHours(0,0,0,0);
+                filterDate.setHours(0,0,0,0);
+                return postDate >= filterDate;
+            });
         }
 
         if (filters.dateTo) {
-            filtered = filtered.filter(post => new Date(post.date) <= new Date(filters.dateTo));
+            filtered = filtered.filter(post => {
+                const dateStr = post.created_at || post.date;
+                if (!dateStr) return false;
+                const postDate = new Date(dateStr);
+                const filterDate = new Date(filters.dateTo);
+                postDate.setHours(0,0,0,0);
+                filterDate.setHours(0,0,0,0);
+                return postDate <= filterDate;
+            });
         }
 
         if (filters.searchQuery) {
@@ -144,7 +164,7 @@ const Content = () => {
         notifyNewPost(newPost, newPost.author || currentUser);
     };
 
-    const handleApprovePost = (postId, newApprovedState) => {
+    const handleApprovePost = async (postId, newApprovedState) => {
         setPosts(prevPosts =>
             prevPosts.map(post => {
                 if (post.id === postId) {
@@ -172,6 +192,17 @@ const Content = () => {
                 return post;
             })
         );
+
+        const params = new URLSearchParams(location.search);
+        const channelIdParam = params.get('channel_id');
+        if (channelIdParam && typeof postId === 'string' && postId.startsWith('fb_api_')) {
+            const backendPostId = postId.replace('fb_api_', '');
+            try {
+                await approveFacebookPost(channelIdParam, backendPostId, newApprovedState);
+            } catch (error) {
+                console.error("Failed to sync post approval to backend:", error);
+            }
+        }
     };
 
     const handleOpenComments = (post) => {
@@ -220,50 +251,176 @@ const Content = () => {
     ];
     const currentViewOption = viewOptions.find(v => v.id === currentView) || viewOptions[0];
 
-    const loadFacebookPosts = (channelId) => {
+    const handleDeletePost = async (postId) => {
+        const params = new URLSearchParams(location.search);
+        const channelIdParam = params.get('channel_id');
+        
+        let channelId = channelIdParam;
+        let backendPostId = postId;
+        
+        if (typeof postId === 'string' && postId.startsWith('fb_api_')) {
+            backendPostId = postId.replace('fb_api_', '');
+        }
+
+        if (!channelId) {
+            const targetPost = posts.find(p => p.id === postId);
+            channelId = targetPost?.channelId;
+        }
+
+        if (!channelId) return;
+
+        try {
+            await deletePost(channelId, backendPostId);
+            if (channelIdParam) {
+                loadFacebookPosts(channelIdParam);
+            } else {
+                loadWorkspacePosts();
+            }
+        } catch (err) {
+            console.error("Failed to delete post:", err);
+            alert(`Delete failed: ${err.message}`);
+        }
+    };
+
+    const loadFacebookPosts = useCallback((channelId) => {
         setIsLoadingPosts(true);
-        getFacebookPosts(channelId)
-            .then(data => {
-                if (data.posts) {
-                    const mappedPosts = data.posts.map(p => ({
-                        id: `fb_api_${p.id}`,
-                        author: 'Facebook Page',
-                        date: new Date(p.created_time).toLocaleString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        }),
-                        content: p.message || '',
-                        // Mapping media: ensure it's always an array. 
-                        // Backend sample uses 'media_url'. Fallback to empty array if missing/empty.
-                        media: p.media_url ? [p.media_url] : [],
-                        platform: 'Facebook',
-                        icon: Facebook,
-                        // Mapping media types: IMAGE -> Post, MULTI_IMAGE -> Carousel, VIDEO -> Reel
-                        type: p.media_type === 'VIDEO' ? 'Reel' : (p.media_type === 'MULTI_IMAGE' ? 'Carousel' : 'Post'),
-                        status: p.status === 'published' ? 'Published' : 'Draft',
-                        avatar: null,
-                        likes: 0,
-                        commentsCount: 0,
-                        shares: 0,
-                        comments: [],
-                        approved: true,
-                        approvedBy: [currentUser],
-                        facebook_post_id: p.facebook_post_id
-                    }));
-                    setPosts(mappedPosts);
+        Promise.all([
+            getChannelDetails(channelId).catch(() => null),
+            getFacebookPosts(channelId)
+        ])
+        .then(([channel, rawPosts]) => {
+            const postsList = Array.isArray(rawPosts) ? rawPosts : (rawPosts.posts || []);
+            
+            const mappedPosts = postsList.map(p => {
+                let platformName = 'Facebook';
+                let PlatformIcon = Facebook;
+                let authorPlaceholder = 'Facebook Page';
+                
+                if (channel?.platform === 'instagram') {
+                    platformName = 'Instagram';
+                    PlatformIcon = Instagram;
+                    authorPlaceholder = 'Instagram Account';
+                } else if (channel?.platform === 'linkedin') {
+                    platformName = 'LinkedIn';
+                    PlatformIcon = Linkedin;
+                    authorPlaceholder = 'LinkedIn Profile';
+                } else if (channel?.platform === 'twitter') {
+                    platformName = 'Twitter';
+                    PlatformIcon = Twitter;
+                    authorPlaceholder = 'X/Twitter Profile';
+                }
+
+                return {
+                    id: `fb_api_${p.id}`,
+                    author: channel?.name || authorPlaceholder,
+                    date: p.created_at ? new Date(p.created_at).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : new Date().toLocaleString(),
+                    content: p.message || '',
+                    media: p.media || [],
+                    platform: platformName,
+                    icon: PlatformIcon,
+                    type: p.type || (p.media?.length > 1 ? 'Carousel' : (p.media?.some(m => m.endsWith('.mp4') || m.endsWith('.mov')) ? 'Reel' : 'Post')),
+                    status: p.status === 'published' ? 'Published' : (p.status === 'scheduled' ? 'Scheduled' : 'Draft'),
+                    avatar: channel?.profile_picture || null,
+                    likes: 0,
+                    commentsCount: p.comments?.length || 0,
+                    shares: 0,
+                    comments: p.comments || [],
+                    approved: p.approved || false,
+                    approvedBy: p.approvedBy || [],
+                    facebook_post_id: p.facebook_post_id || null
+                };
+            });
+            setPosts(mappedPosts);
+        })
+        .catch(err => {
+            console.error("Failed to load channel posts:", err);
+            setPosts(initialPosts); // fallback
+        })
+        .finally(() => {
+            setIsLoadingPosts(false);
+        });
+    }, [currentUser]);
+
+    const loadWorkspacePosts = useCallback(() => {
+        if (!workspaceId) return;
+        setIsLoadingPosts(true);
+        getConnectedChannels(workspaceId)
+            .then(async (channels) => {
+                if (channels && channels.length > 0) {
+                    const allPostsPromises = channels.map(ch => getFacebookPosts(ch.id).catch(() => ({ posts: [] })));
+                    const results = await Promise.all(allPostsPromises);
+                    
+                    const combined = [];
+                    results.forEach((res, index) => {
+                        const ch = channels[index];
+                        const postsList = Array.isArray(res) ? res : (res.posts || []);
+                        postsList.forEach(p => {
+                            let platformName = 'Facebook';
+                            let PlatformIcon = Facebook;
+                            let authorPlaceholder = 'Facebook Page';
+                            
+                            if (ch.platform === 'instagram') {
+                                platformName = 'Instagram';
+                                PlatformIcon = Instagram;
+                                authorPlaceholder = 'Instagram Account';
+                            } else if (ch.platform === 'linkedin') {
+                                platformName = 'LinkedIn';
+                                PlatformIcon = Linkedin;
+                                authorPlaceholder = 'LinkedIn Profile';
+                            } else if (ch.platform === 'twitter') {
+                                platformName = 'Twitter';
+                                PlatformIcon = Twitter;
+                                authorPlaceholder = 'X/Twitter Profile';
+                            }
+
+                            combined.push({
+                                id: `fb_api_${p.id}`,
+                                author: ch.name || authorPlaceholder,
+                                date: p.created_at ? new Date(p.created_at).toLocaleString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                }) : new Date().toLocaleString(),
+                                content: p.message || '',
+                                media: p.media || [],
+                                platform: platformName,
+                                icon: PlatformIcon,
+                                type: p.type || (p.media?.length > 1 ? 'Carousel' : (p.media?.some(m => m.endsWith('.mp4') || m.endsWith('.mov')) ? 'Reel' : 'Post')),
+                                status: p.status === 'published' ? 'Published' : (p.status === 'scheduled' ? 'Scheduled' : 'Draft'),
+                                avatar: ch.profile_picture || null,
+                                likes: 0,
+                                commentsCount: p.comments?.length || 0,
+                                shares: 0,
+                                comments: p.comments || [],
+                                approved: p.approved || false,
+                                approvedBy: p.approvedBy || [],
+                                facebook_post_id: p.facebook_post_id || null,
+                                channelId: ch.id
+                            });
+                        });
+                    });
+                    
+                    setPosts(combined);
+                } else {
+                    setPosts([]);
                 }
             })
             .catch(err => {
-                console.error("Failed to load Facebook posts:", err);
-                setPosts(initialPosts); // fallback
+                console.error("Failed to load workspace posts:", err);
+                setPosts([]);
             })
             .finally(() => {
                 setIsLoadingPosts(false);
             });
-    };
+    }, [workspaceId]);
 
     // UI redesign inspired by Plannable
     // Layout restructuring (non-breaking)
@@ -271,38 +428,39 @@ const Content = () => {
         const params = new URLSearchParams(location.search);
         const platformParam = params.get('platform');
         const viewParam = params.get('view');
-
-        if (platformParam) {
-            setFilters(prev => ({
-                ...prev,
-                platform: platformParam
-            }));
-        }
-
         const searchParam = params.get('search');
-        if (searchParam) {
-            setFilters(prev => ({
-                ...prev,
-                searchQuery: searchParam
-            }));
-        } else {
-            setFilters(prev => ({ ...prev, searchQuery: '' }));
-        }
-
-        if (viewParam && ['feed', 'calendar', 'grid', 'list'].includes(viewParam)) {
-            setCurrentView(viewParam);
-        }
-
         const channelIdParam = params.get('channel_id');
 
-        // Fetch dynamic Facebook posts if applicable
-        if (platformParam === 'Facebook' && channelIdParam) {
-            loadFacebookPosts(channelIdParam);
-        } else {
-            // Revert to initial posts if not a dynamic channel
-            setPosts(initialPosts);
-        }
-    }, [location.search]);
+        setTimeout(() => {
+            if (platformParam) {
+                setFilters(prev => ({
+                    ...prev,
+                    platform: platformParam
+                }));
+            }
+
+            if (searchParam) {
+                setFilters(prev => ({
+                    ...prev,
+                    searchQuery: searchParam
+                }));
+            } else {
+                setFilters(prev => ({ ...prev, searchQuery: '' }));
+            }
+
+            if (viewParam && ['feed', 'calendar', 'grid', 'list'].includes(viewParam)) {
+                setCurrentView(viewParam);
+            }
+
+            // Fetch dynamic posts if a channel is selected
+            if (channelIdParam) {
+                loadFacebookPosts(channelIdParam);
+            } else {
+                // Load all posts for this workspace
+                loadWorkspacePosts();
+            }
+        }, 0);
+    }, [location.search, loadFacebookPosts, loadWorkspacePosts]);
 
     const renderView = () => {
         switch (currentView) {
@@ -330,6 +488,7 @@ const Content = () => {
                         setInitialModalTab('Story');
                         setIsModalOpen(true);
                     }}
+                    onDeletePost={handleDeletePost}
                 />;
         }
     };
@@ -361,7 +520,7 @@ const Content = () => {
                             >
                                 <CurrentViewIcon size={13} style={{ color: 'var(--color-primary)' }} />
                                 <span className="hide-on-mobile">{currentViewOption.label}</span>
-                                <ChevronDown size={12} style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: Boolean(anchorElView) ? 'rotate(180deg)' : 'rotate(0)' }} />
+                                <ChevronDown size={12} style={{ color: 'var(--text-muted)', transition: 'transform 0.15s', transform: anchorElView ? 'rotate(180deg)' : 'rotate(0)' }} />
                             </button>
                         </Tooltip>
                     );
@@ -487,7 +646,11 @@ const Content = () => {
                 onPublishSuccess={() => {
                     const params = new URLSearchParams(location.search);
                     const channelId = params.get('channel_id');
-                    if (channelId) loadFacebookPosts(channelId);
+                    if (channelId) {
+                        loadFacebookPosts(channelId);
+                    } else {
+                        loadWorkspacePosts();
+                    }
                 }}
             />
             <DraftsPanel
@@ -506,11 +669,16 @@ const Content = () => {
                 onAddComment={handleAddComment}
             />
 
-            <MediaLibraryModal isOpen={isMediaOpen} onClose={() => setIsMediaOpen(false)} />
+            <MediaLibraryModal isOpen={isMediaOpen} onClose={() => setIsMediaOpen(false)} workspaceId={workspaceId} />
             <ShareModal isOpen={isShareOpen} onClose={() => setIsShareOpen(false)} />
 
             {/* Content area */}
-            {hasPosts ? (
+            {isLoadingPosts ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '360px', gap: '12px' }}>
+                    <div className="spinner" style={{ borderTopColor: 'var(--color-primary)' }} />
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading posts...</p>
+                </div>
+            ) : hasPosts ? (
                 <div style={{ padding: '0' }}>
                     {renderView()}
                 </div>

@@ -192,14 +192,18 @@ const WorkspaceCard = ({ workspace, onClick, onDelete, onFavoriteToggle, isFavor
                 {/* ── TOP: icon + name + member count + star ── */}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: 1, minWidth: 0 }}>
-                        <div style={{
-                            width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: gradient,
-                            flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: 'white', fontWeight: 700, fontSize: '0.95rem',
-                            boxShadow: '0 4px 10px rgba(99,102,241,0.25)',
-                        }}>
-                            {wsName.charAt(0).toUpperCase()}
-                        </div>
+                        {workspace.logo ? (
+                            <img src={workspace.logo} alt={wsName} style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', objectFit: 'cover', flexShrink: 0, boxShadow: '0 4px 10px rgba(99,102,241,0.25)' }} />
+                        ) : (
+                            <div style={{
+                                width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: gradient,
+                                flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                color: 'white', fontWeight: 700, fontSize: '0.95rem',
+                                boxShadow: '0 4px 10px rgba(99,102,241,0.25)',
+                            }}>
+                                {wsName.charAt(0).toUpperCase()}
+                            </div>
+                        )}
                         <div style={{ minWidth: 0 }}>
                             <div style={{
                                 fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.93rem',
@@ -330,10 +334,7 @@ const WorkspaceCard = ({ workspace, onClick, onDelete, onFavoriteToggle, isFavor
                 isOpen={showSettings}
                 onClose={() => setShowSettings(false)}
                 workspace={workspace}
-                onSave={(updated) => {
-                    // Update local workspace object
-                    if (updated?.name) workspace.name = updated.name;
-                    if (updated?.timezone) workspace.timezone = updated.timezone;
+                onSave={() => {
                     // Force re-render by triggering parent refresh
                     setShowSettings(false);
                     // Small delay then force a re-render

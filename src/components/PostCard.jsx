@@ -3,7 +3,7 @@ import Card from './ui/Card';
 import Badge from './ui/Badge';
 import Button from './ui/Button';
 import { MoreHorizontal, MessageSquare, Heart, CheckCircle, Plus, Check, Smile, Reply, Pencil, Trash2, Send, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Avatar, Tooltip, IconButton, Paper, Fade, Collapse, Chip, Typography, Box, Divider, Zoom, TextField, Button as MuiButton, Badge as MuiBadge, Popover } from '@mui/material';
+import { Avatar, Tooltip, IconButton, Paper, Fade, Collapse, Chip, Typography, Box, Divider, Zoom, TextField, Button as MuiButton, Badge as MuiBadge, Popover, Menu, MenuItem } from '@mui/material';
 import { getAspectRatioStyles } from '../utils/mediaRules';
 
 const PostMedia = ({ post, isMinimized }) => {
@@ -137,7 +137,8 @@ const PostCard = ({
     currentUser = 'Current User',
     currentUserRole = 'admin',
     isMinimized = false,
-    isPanelOpen = false
+    isPanelOpen = false,
+    onDeletePost
 }) => {
     const Icon = post.icon;
     const hasUserApproved = post.approvedBy?.includes(currentUser);
@@ -190,6 +191,24 @@ const PostCard = ({
     const [isPublishing, setIsPublishing] = useState(false);
     const [publishDone, setPublishDone] = useState(false);
     const [isPublished, setIsPublished] = useState(false);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const handleMenuClick = (e) => {
+        e.stopPropagation();
+        setAnchorEl(e.currentTarget);
+    };
+    const handleMenuClose = (e) => {
+        e?.stopPropagation();
+        setAnchorEl(null);
+    };
+    const handleDeleteClick = (e) => {
+        e.stopPropagation();
+        handleMenuClose();
+        if (window.confirm("Are you sure you want to delete this post?")) {
+            if (onDeletePost) {
+                onDeletePost(post.id);
+            }
+        }
+    };
     const inputRef = useRef(null);
 
     const platformColors = {
@@ -868,9 +887,29 @@ const PostCard = ({
                         </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button className="btn-ghost" style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '50%' }}>
+                        <button 
+                            className="btn-ghost" 
+                            onClick={handleMenuClick}
+                            style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '50%' }}
+                        >
                             <MoreHorizontal size={16} />
                         </button>
+                        <Menu
+                            anchorEl={anchorEl}
+                            open={Boolean(anchorEl)}
+                            onClose={handleMenuClose}
+                            PaperProps={{
+                                sx: {
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                    borderRadius: '8px',
+                                    minWidth: '120px'
+                                }
+                            }}
+                        >
+                            <MenuItem onClick={handleDeleteClick} style={{ color: '#ef4444', fontSize: '0.82rem', gap: '8px' }}>
+                                <Trash2 size={14} /> Delete Post
+                            </MenuItem>
+                        </Menu>
                     </div>
                 </div>
 

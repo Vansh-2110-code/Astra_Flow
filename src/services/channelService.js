@@ -18,9 +18,12 @@ import api from './api';
  * Initiate Facebook OAuth flow.
  * Endpoint: GET /api/channels/facebook/login/?workspace_id=<workspace_id>
  */
-export const initiateFacebookLogin = (workspaceId) => {
+export const initiateFacebookLogin = (workspaceId, redirectUri) => {
     const baseUrl = api.defaults.baseURL.replace(/\/api\/?$/, '');
-    window.location.href = `${baseUrl}/api/channels/facebook/login/?workspace_id=${workspaceId}`;
+    const url = new URL(`${baseUrl}/api/channels/facebook/login/`);
+    url.searchParams.append('workspace_id', workspaceId);
+    if (redirectUri) url.searchParams.append('redirect_uri', redirectUri);
+    window.location.href = url.toString();
 };
 
 /**
@@ -99,3 +102,65 @@ export const disconnectChannel = (channelId) =>
  */
 export const getChannelDetails = (channelId) =>
     api.get(`/channels/${channelId}/`).then((res) => res.data);
+
+/**
+ * Initiate Instagram OAuth flow.
+ * Endpoint: GET /api/channels/instagram/login/?workspace_id=<workspace_id>
+ */
+export const initiateInstagramLogin = (workspaceId, redirectUri) => {
+    const baseUrl = api.defaults.baseURL.replace(/\/api\/?$/, '');
+    const url = new URL(`${baseUrl}/api/channels/instagram/login/`);
+    url.searchParams.append('workspace_id', workspaceId);
+    if (redirectUri) url.searchParams.append('redirect_uri', redirectUri);
+    window.location.href = url.toString();
+};
+
+/**
+ * Initiate LinkedIn OAuth flow.
+ * Endpoint: GET /api/channels/linkedin/login/?workspace_id=<workspace_id>
+ */
+export const initiateLinkedInLogin = (workspaceId, redirectUri) => {
+    const baseUrl = api.defaults.baseURL.replace(/\/api\/?$/, '');
+    const url = new URL(`${baseUrl}/api/channels/linkedin/login/`);
+    url.searchParams.append('workspace_id', workspaceId);
+    if (redirectUri) url.searchParams.append('redirect_uri', redirectUri);
+    window.location.href = url.toString();
+};
+
+/**
+ * Initiate Twitter/X OAuth flow.
+ * Endpoint: GET /api/channels/twitter/login/?workspace_id=<workspace_id>
+ */
+export const initiateTwitterLogin = (workspaceId, redirectUri) => {
+    const baseUrl = api.defaults.baseURL.replace(/\/api\/?$/, '');
+    const url = new URL(`${baseUrl}/api/channels/twitter/login/`);
+    url.searchParams.append('workspace_id', workspaceId);
+    if (redirectUri) url.searchParams.append('redirect_uri', redirectUri);
+    window.location.href = url.toString();
+};
+
+
+/**
+ * Verify a channel's integration status.
+ * Endpoint: GET /api/channels/{channelId}/verify/
+ */
+export const verifyChannel = (channelId) =>
+    api.get(`/channels/${channelId}/verify/`).then((res) => res.data);
+
+/**
+ * Approve or unapprove a Facebook post on the backend.
+ * Endpoint: POST /api/channels/{channelId}/posts/{postId}/approve/
+ */
+export const approveFacebookPost = async (channelId, postId, approved) => {
+    const res = await api.post(`/channels/${channelId}/posts/${postId}/approve/`, { approved });
+    return res.data;
+};
+
+/**
+ * Delete a post on the backend.
+ * Endpoint: DELETE /api/channels/{channelId}/posts/{postId}/
+ */
+export const deletePost = async (channelId, postId) => {
+    const res = await api.delete(`/channels/${channelId}/posts/${postId}/`);
+    return res.data;
+};

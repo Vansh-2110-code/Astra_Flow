@@ -4,7 +4,7 @@ import { Drawer, Box, ListItemButton, ListItemIcon, ListItemText, Typography } f
 
 const DRAWER_WIDTH = 260;
 
-export const StyledDrawer = styled(Drawer)(({ theme }) => ({
+export const StyledDrawer = styled(Drawer)(() => ({
     width: DRAWER_WIDTH,
     flexShrink: 0,
     '& .MuiDrawer-paper': {
@@ -15,7 +15,7 @@ export const StyledDrawer = styled(Drawer)(({ theme }) => ({
     },
 }));
 
-export const SidebarWrapper = styled(Box)(({ theme }) => ({
+export const SidebarWrapper = styled(Box)(() => ({
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
@@ -34,7 +34,7 @@ export const LogoWrapper = styled(Box)(({ theme }) => ({
     gap: theme.spacing(1)
 }));
 
-export const LogoIcon = styled(Box)(({ theme }) => ({
+export const LogoIcon = styled(Box)(() => ({
     width: 24,
     height: 24,
     backgroundColor: 'var(--color-primary)',
@@ -47,7 +47,7 @@ export const LogoIcon = styled(Box)(({ theme }) => ({
     fontWeight: 700
 }));
 
-export const LogoText = styled(Typography)(({ theme }) => ({
+export const LogoText = styled(Typography)(() => ({
     fontSize: '1rem',
     fontWeight: 700,
     color: 'var(--color-primary)'
@@ -72,12 +72,12 @@ export const NavItemButton = styled(ListItemButton)(({ theme }) => ({
     }
 }));
 
-export const NavIcon = styled(ListItemIcon)(({ theme }) => ({
+export const NavIcon = styled(ListItemIcon)(() => ({
     minWidth: 32,
     color: 'inherit'
 }));
 
-export const NavText = styled(ListItemText)(({ theme }) => ({
+export const NavText = styled(ListItemText)(() => ({
     '& .MuiListItemText-primary': {
         fontSize: '0.8rem',
         fontWeight: 'inherit'
@@ -167,7 +167,7 @@ export const UserProfileAvatar = styled(Box)(({ theme }) => ({
 
 export const AccountNavIcon = styled(ListItemIcon, {
     shouldForwardProp: (prop) => !['isSelected', 'brandColor'].includes(prop),
-})(({ theme, isSelected, brandColor }) => ({
+})(({ isSelected, brandColor }) => ({
     minWidth: 24,
     color: isSelected ? brandColor : 'inherit'
 }));

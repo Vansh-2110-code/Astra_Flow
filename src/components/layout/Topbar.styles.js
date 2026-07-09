@@ -44,7 +44,7 @@ export const LeftSectionWrapper = styled(Box)(({ theme }) => ({
     gap: theme.spacing(0.5),
     flex: 1,
     minWidth: 0,
-    overflow: 'hidden',
+    overflow: 'visible',
     [theme.breakpoints.up('sm')]: {
         gap: theme.spacing(1),
     },
@@ -66,7 +66,7 @@ export const WorkspaceSwitcherWrapper = styled(Box)(({ theme }) => ({
     },
 }));
 
-export const WorkspaceIcon = styled(Box)(({ theme }) => ({
+export const WorkspaceIcon = styled(Box)(() => ({
     width: 20,
     height: 20,
     borderRadius: 5,
@@ -80,7 +80,7 @@ export const WorkspaceIcon = styled(Box)(({ theme }) => ({
     flexShrink: 0,
 }));
 
-export const WorkspaceNameText = styled(Typography)(({ theme }) => ({
+export const WorkspaceNameText = styled(Typography)(() => ({
     fontWeight: 600,
     fontSize: '0.82rem',
     whiteSpace: 'nowrap',
@@ -90,7 +90,7 @@ export const WorkspaceNameText = styled(Typography)(({ theme }) => ({
 
 export const SearchBox = styled(Box, {
     shouldForwardProp: (prop) => !['isTablet', 'searchOpen'].includes(prop),
-})(({ theme, isTablet, searchOpen }) => ({
+})(({ theme, isTablet }) => ({
     display: 'flex',
     alignItems: 'center',
     backgroundColor: alpha('#fff', 0.5),
@@ -122,7 +122,7 @@ export const StyledInputBase = styled(InputBase)(({ theme }) => ({
     }
 }));
 
-export const StyledBadge = styled(MuiBadge)(({ theme }) => ({
+export const StyledBadge = styled(MuiBadge)(() => ({
     '& .MuiBadge-badge': {
         fontSize: '0.6rem',
         height: 14,
@@ -139,7 +139,7 @@ export const StyledBadge = styled(MuiBadge)(({ theme }) => ({
 
 export const UserAvatar = styled(Avatar, {
     shouldForwardProp: (prop) => prop !== 'active',
-})(({ theme, active }) => ({
+})(({ active }) => ({
     width: 28,
     height: 28,
     fontSize: '0.65rem',
