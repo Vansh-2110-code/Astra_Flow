@@ -4,7 +4,7 @@ import { useParams } from 'react-router-dom';
 import DashboardLayout from '../layouts/DashboardLayout';
 import PostCard from '../components/PostCard';
 import Button from '../components/ui/Button';
-import { CheckCircle, XCircle, ChevronDown, Calendar, Loader } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronDown, Calendar, Loader, Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
 import { getConnectedChannels, getFacebookPosts, approveFacebookPost, deletePost } from '../services/channelService';
 
 const Approvals = () => {
@@ -30,11 +30,50 @@ const Approvals = () => {
                         const ch = channels[index];
                         const postsList = Array.isArray(res) ? res : (res.posts || []);
                         postsList.forEach(p => {
-                            const isInstagram = ch.platform === 'instagram';
+                            let platformName = 'Facebook';
+                            let PlatformIcon = Facebook;
+                            let authorPlaceholder = 'Facebook Page';
+                            
+                            if (ch.platform === 'instagram') {
+                                platformName = 'Instagram';
+                                PlatformIcon = Instagram;
+                                authorPlaceholder = 'Instagram Account';
+                            } else if (ch.platform === 'linkedin') {
+                                platformName = 'LinkedIn';
+                                PlatformIcon = Linkedin;
+                                authorPlaceholder = 'LinkedIn Profile';
+                            } else if (ch.platform === 'twitter') {
+                                platformName = 'Twitter';
+                                PlatformIcon = Twitter;
+                                authorPlaceholder = 'X/Twitter Profile';
+                            }
+
                             const mappedPost = {
-                                ...p,
-                                platform: isInstagram ? 'Instagram' : 'Facebook',
-                                channelId: ch.id
+                                id: p.id,
+                                author: ch.name || authorPlaceholder,
+                                date: p.created_at ? new Date(p.created_at).toLocaleString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                }) : new Date().toLocaleString(),
+                                content: p.message || '',
+                                media: p.media || [],
+                                platform: platformName,
+                                icon: PlatformIcon,
+                                type: p.type || (p.media?.length > 1 ? 'Carousel' : (p.media?.some(m => m.endsWith('.mp4') || m.endsWith('.mov')) ? 'Reel' : 'Post')),
+                                status: p.status === 'published' ? 'Published' : (p.status === 'scheduled' ? 'Scheduled' : 'Draft'),
+                                avatar: ch.profile_picture || null,
+                                likes: 0,
+                                commentsCount: p.comments?.length || 0,
+                                shares: 0,
+                                comments: p.comments || [],
+                                approved: p.approved || false,
+                                approvedBy: p.approvedBy || [],
+                                facebook_post_id: p.facebook_post_id || null,
+                                channelId: ch.id,
+                                scheduledTime: p.scheduled_time || null
                             };
                             
                             // Pending Approval = scheduled posts that are NOT approved yet

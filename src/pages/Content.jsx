@@ -193,12 +193,14 @@ const Content = () => {
             })
         );
 
-        const params = new URLSearchParams(location.search);
-        const channelIdParam = params.get('channel_id');
-        if (channelIdParam && typeof postId === 'string' && postId.startsWith('fb_api_')) {
+        // Find the post to get its channelId
+        const targetPost = posts.find(p => p.id === postId);
+        const channelId = targetPost?.channelId || new URLSearchParams(location.search).get('channel_id');
+
+        if (channelId && typeof postId === 'string' && postId.startsWith('fb_api_')) {
             const backendPostId = postId.replace('fb_api_', '');
             try {
-                await approveFacebookPost(channelIdParam, backendPostId, newApprovedState);
+                await approveFacebookPost(channelId, backendPostId, newApprovedState);
             } catch (error) {
                 console.error("Failed to sync post approval to backend:", error);
             }
@@ -333,7 +335,9 @@ const Content = () => {
                     comments: p.comments || [],
                     approved: p.approved || false,
                     approvedBy: p.approvedBy || [],
-                    facebook_post_id: p.facebook_post_id || null
+                    facebook_post_id: p.facebook_post_id || null,
+                    channelId: channelId,
+                    scheduledTime: p.scheduled_time || null
                 };
             });
             setPosts(mappedPosts);
@@ -403,7 +407,8 @@ const Content = () => {
                                 approved: p.approved || false,
                                 approvedBy: p.approvedBy || [],
                                 facebook_post_id: p.facebook_post_id || null,
-                                channelId: ch.id
+                                channelId: ch.id,
+                                scheduledTime: p.scheduled_time || null
                             });
                         });
                     });

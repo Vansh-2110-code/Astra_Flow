@@ -1070,7 +1070,7 @@ app.delete('/api/workspaces/:workspaceId/media/:mediaId/', (req, res) => {
 // POST /api/channels/:channelId/facebook/create-post/
 app.post('/api/channels/:channelId/facebook/create-post/', upload.any(), async (req, res) => {
     const { channelId } = req.params;
-    const { message, scheduled_time, is_draft } = req.body;
+    const { message, scheduled_time, is_draft, created_by } = req.body;
     const db = loadDB();
 
     const files = req.files || [];
@@ -1158,7 +1158,8 @@ app.post('/api/channels/:channelId/facebook/create-post/', upload.any(), async (
         created_at: new Date().toISOString(),
         media: mediaUrls,
         comments: [],
-        facebook_post_id: facebook_post_id
+        facebook_post_id: facebook_post_id,
+        created_by: created_by || 'Admin User'
     };
 
     const chanPosts = db.posts[channelId] || [];
@@ -1281,9 +1282,23 @@ async function publishPostToInstagram(channel, post) {
                     });
                     const tmpData = await tmpRes.json();
                     if (tmpRes.ok && tmpData.status === 'success' && tmpData.data?.url) {
-                        const viewUrl = tmpData.data.url;
-                        mediaUrl = viewUrl.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-                        console.log(`[Instagram Upload] Successfully uploaded! Public direct URL: ${mediaUrl}`);
+                        const landingUrl = tmpData.data.url;
+                        console.log(`[Instagram Upload] Uploaded successfully. Landing page: ${landingUrl}. Parsing direct URL...`);
+                        try {
+                            const pageRes = await fetch(landingUrl);
+                            const html = await pageRes.text();
+                            const match = html.match(/https:\/\/tmpfiles\.org\/dl\/[^\/]+\/[^\/]+\/[^\s"]+/);
+                            if (match) {
+                                mediaUrl = match[0];
+                                console.log(`[Instagram Upload] Successfully resolved public direct URL: ${mediaUrl}`);
+                            } else {
+                                console.warn("[Instagram Upload] Direct URL regex match failed in HTML. Using fallback /dl/ url.");
+                                mediaUrl = landingUrl.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+                            }
+                        } catch (pageErr) {
+                            console.error("[Instagram Upload] Failed to fetch/parse landing page HTML:", pageErr.message);
+                            mediaUrl = landingUrl.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+                        }
                     } else {
                         console.warn(`[Instagram Upload] tmpfiles.org upload failed: ${tmpData.error || 'Unknown error'}. Using backup template.`);
                         mediaUrl = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800';
@@ -1707,6 +1722,50 @@ async function replyToComment(pageToken, commentId, message) {
 }
 
 
+// GET /api/notifications
+app.get('/api/notifications', (req, res) => {
+    const db = loadDB();
+    const notifications = db.notifications || [];
+    res.json(notifications);
+});
+
+// POST /api/notifications
+app.post('/api/notifications', (req, res) => {
+    const db = loadDB();
+    db.notifications = db.notifications || [];
+    const newNotif = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        ...req.body
+    };
+    db.notifications.push(newNotif);
+    saveDB(db);
+    res.status(201).json(newNotif);
+});
+
+// POST /api/notifications/:id/read
+app.post('/api/notifications/:id/read', (req, res) => {
+    const { id } = req.params;
+    const db = loadDB();
+    db.notifications = db.notifications || [];
+    const notif = db.notifications.find(n => String(n.id) === String(id));
+    if (notif) {
+        notif.isRead = true;
+        saveDB(db);
+    }
+    res.json({ success: true });
+});
+
+// POST /api/notifications/clear
+app.post('/api/notifications/clear', (req, res) => {
+    const db = loadDB();
+    db.notifications = [];
+    saveDB(db);
+    res.json({ success: true });
+});
+
+
 // Background runner to publish approved scheduled posts when their release time is reached
 setInterval(async () => {
     try {
@@ -1738,6 +1797,37 @@ setInterval(async () => {
                             }
                             post.status = 'published';
                             post.facebook_post_id = publishedId;
+
+                            // Create auto-publishing notifications
+                            db.notifications = db.notifications || [];
+                            const creatorName = post.created_by || 'Admin';
+
+                            // 1. Notification for Admin
+                            db.notifications.push({
+                                id: Date.now() + 1,
+                                timestamp: new Date().toISOString(),
+                                isRead: false,
+                                type: 'approval',
+                                message: `Scheduled post by ${creatorName} was successfully published to ${channel.platform}`,
+                                relatedPostId: post.id,
+                                createdBy: 'System',
+                                recipient: 'Admin'
+                            });
+
+                            // 2. Notification for creator (if not Admin)
+                            if (creatorName !== 'Admin' && creatorName !== 'Admin User') {
+                                db.notifications.push({
+                                    id: Date.now() + 2,
+                                    timestamp: new Date().toISOString(),
+                                    isRead: false,
+                                    type: 'approval',
+                                    message: `Your scheduled post has been successfully published to ${channel.platform}`,
+                                    relatedPostId: post.id,
+                                    createdBy: 'System',
+                                    recipient: creatorName
+                                });
+                            }
+
                             dbChanged = true;
                             console.log(`[Auto-Scheduler] Successfully published post ${post.id} (ID: ${publishedId}) on ${channel.platform}`);
                         } catch (pubErr) {

@@ -607,7 +607,7 @@ const PostCard = ({
             }}
         >
             {/* Approval dot - hidden if panel open or mobile */}
-            {(!isCommentBoxClipped && !isPanelOpen) && (
+            {isMinimized && onApprove && (!isCommentBoxClipped && !isPanelOpen) && (
                 <div
                     onClick={handleApprove}
                     onMouseEnter={() => setShowApproverPopup(true)}
@@ -643,7 +643,7 @@ const PostCard = ({
             )}
 
             {/* Platform icon circle - hidden if panel open or mobile */}
-            {(!isCommentBoxClipped && !isPanelOpen) && (
+            {isMinimized && (!isCommentBoxClipped && !isPanelOpen) && (
                 <div style={{ position: 'absolute', top: '60px', left: isMinimized ? '-44px' : '0', width: '36px', height: '36px', zIndex: showPlatformMenu ? 101 : 10 }}>
                     <style>{`
                         @keyframes spinArc { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -884,6 +884,19 @@ const PostCard = ({
                             <span style={{ fontWeight: 600, fontSize: '0.82rem' }}>{post.platform}</span>
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: '0 4px' }}>•</span>
                             <span className="text-muted" style={{ fontSize: '0.75rem' }}>{post.date}</span>
+                            {post.status === 'Scheduled' && post.scheduledTime && (
+                                <>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: '0 4px' }}>•</span>
+                                    <span style={{ fontSize: '0.75rem', color: '#6366f1', fontWeight: 600 }}>
+                                        Scheduled for {new Date(post.scheduledTime).toLocaleString('en-US', {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1362,7 +1375,7 @@ const PostCard = ({
             </Card>
 
             {/* Inline floating comments box on the right side */}
-            {post.comments !== undefined && !isCommentBoxClipped && !isPanelOpen && (
+            {post.comments !== undefined && onAddComment && !isCommentBoxClipped && !isPanelOpen && (
                 <Fade in timeout={350}>
                     <Paper
                         elevation={12}

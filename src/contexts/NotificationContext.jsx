@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useState, useContext, useCallback } from 'react';
-import { mockNotifications } from '../data/mockNotifications';
+import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import api from '../services/api';
+import { getUserData } from '../services/authService';
 
 const NotificationContext = createContext();
 
@@ -14,43 +15,111 @@ export const useNotifications = () => {
 
 export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
-    const currentUser = 'Admin'; // This should come from auth context in production
+    
+    // Get current user dynamically
+    const user = getUserData();
+    const currentUser = user 
+        ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email 
+        : 'Admin';
+
+    // Fetch initial notifications from backend and start polling
+    useEffect(() => {
+        const fetchNotifications = () => {
+            api.get('/notifications')
+                .then(res => {
+                    setNotifications(res.data);
+                })
+                .catch(err => {
+                    console.error("Failed to load notifications from backend:", err);
+                });
+        };
+
+        fetchNotifications();
+        const interval = setInterval(fetchNotifications, 20000); // Poll every 20 seconds
+        return () => clearInterval(interval);
+    }, []);
+
+    // Filter notifications for the current user
+    const filteredNotifications = notifications.filter(n => {
+        if (!n.recipient) return true; // default/all
+        if (n.recipient === 'all') return true;
+        
+        const user = getUserData();
+        const userName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'Admin';
+        const userRole = user?.role || 'admin';
+        const userEmail = user?.email || '';
+
+        if (n.recipient === 'Admin' && userRole === 'admin') return true;
+        if (n.recipient === userName) return true;
+        if (n.recipient === userEmail) return true;
+        
+        return false;
+    });
 
     const addNotification = useCallback((notification) => {
-        const newNotification = {
-            id: Date.now(),
-            timestamp: new Date().toISOString(),
+        const payload = {
             isRead: false,
+            recipient: 'Admin', // Default to admin
             ...notification
         };
-        setNotifications(prev => [newNotification, ...prev]);
+        api.post('/notifications', payload)
+            .then(res => {
+                setNotifications(prev => [res.data, ...prev]);
+            })
+            .catch(err => {
+                console.error("Failed to persist notification:", err);
+                setNotifications(prev => [{
+                    id: Date.now(),
+                    timestamp: new Date().toISOString(),
+                    ...payload
+                }, ...prev]);
+            });
     }, []);
 
     const markAsRead = useCallback((notificationId) => {
-        setNotifications(prev =>
-            prev.map(notif =>
-                notif.id === notificationId ? { ...notif, isRead: true } : notif
-            )
-        );
+        api.post(`/notifications/${notificationId}/read`)
+            .then(() => {
+                setNotifications(prev =>
+                    prev.map(notif =>
+                        notif.id === notificationId ? { ...notif, isRead: true } : notif
+                    )
+                );
+            })
+            .catch(err => {
+                console.error("Failed to mark notification as read:", err);
+            });
     }, []);
 
     const markAllAsRead = useCallback(() => {
-        setNotifications(prev =>
-            prev.map(notif => ({ ...notif, isRead: true }))
-        );
-    }, []);
+        const unread = filteredNotifications.filter(n => !n.isRead);
+        Promise.all(unread.map(n => api.post(`/notifications/${n.id}/read`).catch(() => {})))
+            .then(() => {
+                setNotifications(prev =>
+                    prev.map(notif => {
+                        const isMatch = filteredNotifications.some(fn => fn.id === notif.id);
+                        return isMatch ? { ...notif, isRead: true } : notif;
+                    })
+                );
+            });
+    }, [filteredNotifications]);
 
     const deleteNotification = useCallback((notificationId) => {
         setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
     }, []);
 
     const clearAllNotifications = useCallback(() => {
-        setNotifications([]);
+        api.post('/notifications/clear')
+            .then(() => {
+                setNotifications([]);
+            })
+            .catch(err => {
+                console.error("Failed to clear notifications:", err);
+            });
     }, []);
 
     const getUnreadCount = useCallback(() => {
-        return notifications.filter(n => !n.isRead).length;
-    }, [notifications]);
+        return filteredNotifications.filter(n => !n.isRead).length;
+    }, [filteredNotifications]);
 
     // Notification Triggers
     const notifyNewPost = useCallback((post, creator) => {
@@ -70,7 +139,8 @@ export const NotificationProvider = ({ children }) => {
                 type: 'approval',
                 message: `Your post has been approved by ${approver}`,
                 relatedPostId: post.id,
-                createdBy: approver
+                createdBy: approver,
+                recipient: creator
             });
         }
     }, [addNotification, currentUser]);
@@ -91,12 +161,14 @@ export const NotificationProvider = ({ children }) => {
             ? `${commenter} commented on your highlighted text`
             : `${commenter} commented on a post`;
         
+        const creator = post.created_by || post.author || 'Admin';
         if (currentUser !== commenter) {
             addNotification({
                 type: 'comment',
                 message,
                 relatedPostId: post.id,
-                createdBy: commenter
+                createdBy: commenter,
+                recipient: creator
             });
         }
     }, [addNotification, currentUser]);
@@ -118,7 +190,8 @@ export const NotificationProvider = ({ children }) => {
                 type: 'warning',
                 message: `Your post was rejected by ${rejector}`,
                 relatedPostId: post.id,
-                createdBy: rejector
+                createdBy: rejector,
+                recipient: creator
             });
         }
     }, [addNotification, currentUser]);
@@ -145,7 +218,7 @@ export const NotificationProvider = ({ children }) => {
     }, [notifications, notifyPostNeedsApproval]);
 
     const value = {
-        notifications,
+        notifications: filteredNotifications,
         addNotification,
         markAsRead,
         markAllAsRead,

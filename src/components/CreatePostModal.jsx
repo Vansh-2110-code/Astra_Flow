@@ -10,6 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import EmojiPicker from 'emoji-picker-react';
 import { getConnectedChannels, createFacebookPost } from '../services/channelService';
+import { getUserData } from '../services/authService';
 import PostTab from './tabs/PostTab';
 import StoryTab from './tabs/StoryTab';
 import CarouselEditView from './tabs/CarouselEditView';
@@ -277,10 +278,14 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                 const hasMedia = uploadedMedia.length > 0;
                 let payload;
 
+                const user = getUserData();
+                const creatorName = user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email : 'Admin User';
+
                 if (hasMedia) {
                     payload = new FormData();
                     payload.append('post_type', 'image');
                     payload.append('message', caption);
+                    payload.append('created_by', creatorName);
 
                     // Add scheduled_time if in any future/scheduled action
                     // Spec 4.2 requires ISO format: 2026-03-03T08:40:00Z
@@ -302,7 +307,8 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                     // Spec 4.1: Text Post (Standard JSON)
                     payload = {
                         post_type: 'text',
-                        message: caption
+                        message: caption,
+                        created_by: creatorName
                     };
 
                     // Scheduled time for text post

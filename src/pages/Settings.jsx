@@ -4,8 +4,8 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import { Building2, Palette, Shield, Plug, Bell, AlertTriangle, Check, Loader2, Globe, Facebook, Instagram, Linkedin, Twitter } from 'lucide-react';
-import { updateWorkspace, getWorkspaceDetail, deleteWorkspace, uploadWorkspaceLogo } from '../services/workspaceService';
-import { initiateFacebookLogin, initiateInstagramLogin, initiateLinkedInLogin, initiateTwitterLogin, getConnectedChannels, disconnectChannel, verifyChannel } from '../services/channelService';
+import { updateWorkspace, getWorkspaceDetail, deleteWorkspace, uploadWorkspaceLogo, getWorkspaceMembers } from '../services/workspaceService';
+import { initiateFacebookLogin, initiateInstagramLogin, initiateLinkedInLogin, initiateTwitterLogin, getConnectedChannels, disconnectChannel, verifyChannel, getFacebookPosts } from '../services/channelService';
 import ConnectFacebookButton from '../components/ConnectFacebookButton';
 
 const TABS = [
@@ -69,6 +69,8 @@ const Settings = () => {
     const [permMatrix, setPermMatrix] = useState(defaultMatrix);
     const [workspaceLogo, setWorkspaceLogo] = useState(null);
     const [logoLoading, setLogoLoading] = useState(false);
+    const [membersCount, setMembersCount] = useState(0);
+    const [postsCount, setPostsCount] = useState(0);
 
     // Initialize integrations from localStorage
     const [integrations, setIntegrations] = useState(() => {
@@ -249,6 +251,13 @@ const Settings = () => {
                 setToast({ type: 'error', message: 'Failed to load workspace settings' });
                 setTimeout(() => setToast(null), 3000);
             }
+
+            try {
+                const members = await getWorkspaceMembers(workspaceId);
+                setMembersCount(members?.length || 0);
+            } catch (err) {
+                console.error('Failed to fetch workspace members:', err);
+            }
         };
         fetchDetails();
     }, [workspaceId]);
@@ -315,6 +324,27 @@ const Settings = () => {
             }));
         }).catch(err => console.error("Failed to load connected channels", err));
     }, [workspaceId]);
+
+    // Fetch posts count based on connected channels
+    useEffect(() => {
+        if (!workspaceId) return;
+        if (!connectedChannels || connectedChannels.length === 0) {
+            setPostsCount(0);
+            return;
+        }
+
+        const fetchPostsCount = async () => {
+            try {
+                const promises = connectedChannels.map(ch => getFacebookPosts(ch.id).catch(() => []));
+                const results = await Promise.all(promises);
+                const total = results.reduce((acc, curr) => acc + (Array.isArray(curr) ? curr.length : 0), 0);
+                setPostsCount(total);
+            } catch (err) {
+                console.error("Failed to load posts count", err);
+            }
+        };
+        fetchPostsCount();
+    }, [workspaceId, connectedChannels]);
 
     const handleUpdateWorkspace = async () => {
         setLoading(true);
@@ -500,11 +530,11 @@ const Settings = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                                     <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-md)' }}>
                                         <div className="text-muted" style={{ fontSize: '0.8rem' }}>Members</div>
-                                        <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>12</div>
+                                        <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>{membersCount}</div>
                                     </div>
                                     <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-md)' }}>
                                         <div className="text-muted" style={{ fontSize: '0.8rem' }}>Posts</div>
-                                        <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>24</div>
+                                        <div style={{ fontWeight: 700, fontSize: '1.25rem' }}>{postsCount}</div>
                                     </div>
                                     <div style={{ padding: '0.75rem', background: 'rgba(0,0,0,0.02)', borderRadius: 'var(--radius-md)' }}>
                                         <div className="text-muted" style={{ fontSize: '0.8rem' }}>Connected</div>
