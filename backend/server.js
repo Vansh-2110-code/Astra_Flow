@@ -872,18 +872,36 @@ app.get('/api/channels/instagram/login/', (req, res) => {
     res.redirect(fbOAuthUrl);
 });
 
-// GET /api/channels/linkedin/login/ (Simulated OAuth flow redirecting to workspace settings)
+// GET /api/channels/linkedin/login/ (OAuth redirect or mock fallback)
 app.get('/api/channels/linkedin/login/', (req, res) => {
     const { workspace_id, redirect_uri } = req.query;
-    const db = loadDB();
+    
+    const clientId = process.env.LINKEDIN_CLIENT_ID;
+    if (clientId) {
+        // Real LinkedIn OAuth Flow
+        const redirectHost = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+        const oauthRedirectUri = `${redirectHost}/api/channels/linkedin/callback/`;
+        
+        const stateObj = { workspace_id: workspace_id || 'ws-1', redirect_uri };
+        const stateValue = Buffer.from(JSON.stringify(stateObj)).toString('base64');
+        
+        // Scope for Company Page posts and fetching pages you administer
+        const scope = 'w_organization_social r_organization_social openid profile email';
+        const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(oauthRedirectUri)}&state=${stateValue}&scope=${encodeURIComponent(scope)}`;
+        
+        return res.redirect(authUrl);
+    }
 
+    // Mock Fallback
+    const db = loadDB();
     const newChan = {
         id: `chan-${uuidv4()}`,
-        name: 'Linked LinkedIn Profile',
+        name: 'Linked LinkedIn Page',
         platform: 'linkedin',
-        page_name: 'My Professional Network Profile',
+        page_name: 'Sanna Innovations',
         profile_picture: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150',
-        workspace_id: workspace_id || 'ws-1'
+        workspace_id: workspace_id || 'ws-1',
+        linkedin_urn: 'urn:li:organization:sanna-innovations'
     };
 
     db.channels.push(newChan);
@@ -893,6 +911,164 @@ app.get('/api/channels/linkedin/login/', (req, res) => {
     const targetUrl = redirect_uri || `http://localhost:${clientPort}/workspace/${workspace_id}/settings`;
     const finalUrl = targetUrl.includes('?') ? `${targetUrl}&linkedin=success` : `${targetUrl}?linkedin=success`;
     res.redirect(finalUrl);
+});
+
+// GET /api/channels/linkedin/callback/
+app.get('/api/channels/linkedin/callback/', async (req, res) => {
+    const { code, state, error, error_description } = req.query;
+    
+    let workspaceId = 'ws-1';
+    let frontendRedirectUri = '';
+    
+    if (state) {
+        try {
+            const decoded = JSON.parse(Buffer.from(state, 'base64').toString('ascii'));
+            workspaceId = decoded.workspace_id || 'ws-1';
+            frontendRedirectUri = decoded.redirect_uri || '';
+        } catch (e) {
+            console.error('Failed to parse state from LinkedIn OAuth callback:', e);
+        }
+    }
+
+    const clientPort = 5173;
+    const fallbackTargetUrl = frontendRedirectUri || `http://localhost:${clientPort}/workspace/${workspaceId}/settings`;
+
+    if (error) {
+        console.error('LinkedIn OAuth error:', error, error_description);
+        const finalUrl = fallbackTargetUrl.includes('?') ? `${fallbackTargetUrl}&linkedin=error&message=${encodeURIComponent(error_description || error)}` : `${fallbackTargetUrl}?linkedin=error&message=${encodeURIComponent(error_description || error)}`;
+        return res.redirect(finalUrl);
+    }
+
+    if (!code) {
+        const finalUrl = fallbackTargetUrl.includes('?') ? `${fallbackTargetUrl}&linkedin=error&message=No+code+received` : `${fallbackTargetUrl}?linkedin=error&message=No+code+received`;
+        return res.redirect(finalUrl);
+    }
+
+    const clientId = process.env.LINKEDIN_CLIENT_ID;
+    const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+
+    if (!clientId || !clientSecret) {
+        console.error('LinkedIn client credentials missing during callback');
+        const finalUrl = fallbackTargetUrl.includes('?') ? `${fallbackTargetUrl}&linkedin=error&message=Missing+credentials` : `${fallbackTargetUrl}?linkedin=error&message=Missing+credentials`;
+        return res.redirect(finalUrl);
+    }
+
+    try {
+        const redirectHost = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
+        const oauthRedirectUri = `${redirectHost}/api/channels/linkedin/callback/`;
+
+        // 1. Exchange code for access token
+        const tokenRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                code,
+                redirect_uri: oauthRedirectUri,
+                client_id: clientId,
+                client_secret: clientSecret
+            })
+        });
+
+        if (!tokenRes.ok) {
+            const tokenErr = await tokenRes.json();
+            throw new Error(tokenErr.error_description || tokenErr.error || 'Failed to exchange token');
+        }
+
+        const tokenData = await tokenRes.json();
+        const accessToken = tokenData.access_token;
+
+        // 2. Fetch administered Company Pages (Organizational Entities)
+        const aclRes = await fetch('https://api.linkedin.com/v2/organizationalEntityAcls?q=roleAssignee&role=ADMINISTRATOR', {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-Restli-Protocol-Version': '2.0.0'
+            }
+        });
+
+        if (!aclRes.ok) {
+            const aclErr = await aclRes.json();
+            throw new Error(aclErr.message || 'Failed to retrieve administered Company Pages. Please verify you have requested the Community Management API in the LinkedIn Developer Portal.');
+        }
+
+        const aclData = await aclRes.json();
+        const elements = aclData.elements || [];
+
+        if (elements.length === 0) {
+            throw new Error('No LinkedIn Company Pages found where your account is an Administrator.');
+        }
+
+        const db = loadDB();
+        let addedCount = 0;
+
+        for (const element of elements) {
+            const orgUrn = element.organizationalEntity;
+            if (!orgUrn || !orgUrn.startsWith('urn:li:organization:')) {
+                continue;
+            }
+
+            const orgId = orgUrn.split(':').pop();
+
+            // Fetch organization details (Name and Logo)
+            const orgDetailsRes = await fetch(`https://api.linkedin.com/v2/organizations/${orgId}`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'X-Restli-Protocol-Version': '2.0.0'
+                }
+            });
+
+            let pageName = `LinkedIn Company Page (ID: ${orgId})`;
+            let profilePic = 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150';
+
+            if (orgDetailsRes.ok) {
+                const orgDetails = await orgDetailsRes.json();
+                
+                // Get Localized Name
+                if (orgDetails.localizedName) {
+                    pageName = orgDetails.localizedName;
+                } else if (orgDetails.name && orgDetails.name.preferredLocale) {
+                    const localeKey = `${orgDetails.name.preferredLocale.language}_${orgDetails.name.preferredLocale.country}`;
+                    pageName = orgDetails.name.localized[localeKey] || pageName;
+                }
+            }
+
+            // Save or Update LinkedIn Company Page connected channel
+            const existingChanIdx = db.channels.findIndex(c => c.workspace_id === workspaceId && c.linkedin_urn === orgUrn);
+
+            if (existingChanIdx !== -1) {
+                db.channels[existingChanIdx].access_token = accessToken;
+                db.channels[existingChanIdx].page_name = pageName;
+                db.channels[existingChanIdx].profile_picture = profilePic;
+            } else {
+                const newChan = {
+                    id: `chan-${uuidv4()}`,
+                    name: 'Linked LinkedIn Page',
+                    platform: 'linkedin',
+                    page_name: pageName,
+                    profile_picture: profilePic,
+                    workspace_id: workspaceId,
+                    access_token: accessToken,
+                    linkedin_urn: orgUrn
+                };
+                db.channels.push(newChan);
+            }
+            addedCount++;
+        }
+
+        if (addedCount === 0) {
+            throw new Error('No valid LinkedIn Company Pages could be imported.');
+        }
+
+        saveDB(db);
+
+        const finalUrl = fallbackTargetUrl.includes('?') ? `${fallbackTargetUrl}&linkedin=success` : `${fallbackTargetUrl}?linkedin=success`;
+        res.redirect(finalUrl);
+
+    } catch (err) {
+        console.error('LinkedIn OAuth Callback failed:', err);
+        const finalUrl = fallbackTargetUrl.includes('?') ? `${fallbackTargetUrl}&linkedin=error&message=${encodeURIComponent(err.message)}` : `${fallbackTargetUrl}?linkedin=error&message=${encodeURIComponent(err.message)}`;
+        res.redirect(finalUrl);
+    }
 });
 
 // GET /api/channels/twitter/login/ (Simulated OAuth flow redirecting to workspace settings)
@@ -1148,13 +1324,21 @@ app.post('/api/channels/:channelId/facebook/create-post/', upload.any(), async (
         }
     }
 
+    const isDraft = is_draft === 'true';
+    const isScheduled = Boolean(scheduled_time);
+    const shouldAutoApproveLinkedInScheduled = !isDraft && isScheduled && channel?.platform === 'linkedin';
+    const isApproved = (!isDraft && !isScheduled) || shouldAutoApproveLinkedInScheduled;
+    const approvedBy = isApproved
+        ? (shouldAutoApproveLinkedInScheduled ? ['Auto Scheduler'] : ['Admin'])
+        : [];
+
     const newPost = {
         id: `post-${uuidv4()}`,
         message,
         scheduled_time: scheduled_time || null,
-        status: is_draft === 'true' ? 'draft' : (scheduled_time ? 'scheduled' : 'published'),
-        approved: !scheduled_time && is_draft !== 'true',
-        approvedBy: !scheduled_time && is_draft !== 'true' ? ['Admin'] : [],
+        status: isDraft ? 'draft' : (isScheduled ? 'scheduled' : 'published'),
+        approved: isApproved,
+        approvedBy,
         created_at: new Date().toISOString(),
         media: mediaUrls,
         comments: [],
