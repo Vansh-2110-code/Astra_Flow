@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import api from '../services/api';
-import { getUserData } from '../services/authService';
+import { getUserData, getAccessToken } from '../services/authService';
 
 const NotificationContext = createContext();
 
@@ -22,8 +22,15 @@ export const NotificationProvider = ({ children }) => {
         ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email 
         : 'Admin';
 
+    const token = getAccessToken();
+
     // Fetch initial notifications from backend and start polling
     useEffect(() => {
+        if (!token) {
+            setNotifications([]);
+            return;
+        }
+
         const fetchNotifications = () => {
             api.get('/notifications')
                 .then(res => {
@@ -37,7 +44,7 @@ export const NotificationProvider = ({ children }) => {
         fetchNotifications();
         const interval = setInterval(fetchNotifications, 20000); // Poll every 20 seconds
         return () => clearInterval(interval);
-    }, []);
+    }, [token]);
 
     // Filter notifications for the current user
     const filteredNotifications = notifications.filter(n => {

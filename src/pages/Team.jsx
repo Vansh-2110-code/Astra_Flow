@@ -8,6 +8,7 @@ import InviteMemberModal from '../components/InviteMemberModal';
 import Toast from '../components/ui/Toast';
 import { getWorkspaceMembers, removeMember, updateMemberRole } from '../services/workspaceService';
 import { Mail, MoreVertical, Plus, Loader2, UserMinus, Trash2, UserCog, Shield, Edit, Eye } from 'lucide-react';
+import { getUserData } from '../services/authService';
 
 const ROLE_DESCRIPTIONS = {
     Admin: 'Full access — create, edit, approve, delete posts, manage members & settings',
@@ -24,6 +25,8 @@ const Team = () => {
     const [hoveredRole, setHoveredRole] = useState(null);
     const [openMenuId, setOpenMenuId] = useState(null);
     const [toast, setToast] = useState(null);
+    const [currentUserRole, setCurrentUserRole] = useState('viewer');
+    const isAdmin = currentUserRole?.toLowerCase() === 'owner' || currentUserRole?.toLowerCase() === 'admin';
 
     // Fetch members from API on mount
     useEffect(() => {
@@ -37,6 +40,14 @@ const Team = () => {
                 // API may return { members: [...] } or an array directly
                 const list = Array.isArray(data) ? data : (data.members || data.data || []);
                 setMembers(list);
+
+                const user = getUserData();
+                if (user) {
+                    const currentMember = list.find(m => m.id === user.id || (m.email && m.email.toLowerCase() === user.email.toLowerCase()));
+                    if (currentMember) {
+                        setCurrentUserRole(currentMember.role);
+                    }
+                }
             } catch (err) {
                 console.error('Failed to fetch team members:', err);
                 setError(err.message || 'Failed to load team members');
@@ -110,9 +121,11 @@ const Team = () => {
                     <h1 className="text-h1">Team Members</h1>
                     <p className="text-muted">Manage your collaborative team.</p>
                 </div>
-                <Button variant="primary" onClick={() => setInviteOpen(true)}>
-                    <Plus size={18} /> Invite Member
-                </Button>
+                {isAdmin && (
+                    <Button variant="primary" onClick={() => setInviteOpen(true)}>
+                        <Plus size={18} /> Invite Member
+                    </Button>
+                )}
             </div>
 
             {toast && (
@@ -161,7 +174,7 @@ const Team = () => {
                                 <th>Email</th>
                                 <th>Role</th>
                                 <th>Status</th>
-                                <th></th>
+                                {isAdmin && <th></th>}
                             </tr>
                         </thead>
                         <tbody style={{ overflow: 'visible' }}>
@@ -203,53 +216,55 @@ const Team = () => {
                                         <td>
                                             <Badge status={member.status || 'Active'} />
                                         </td>
-                                        <td style={{ textAlign: 'right', position: 'relative', overflow: 'visible' }}>
-                                            <button
-                                                type="button"
-                                                className="btn btn-ghost"
-                                                onClick={() => setOpenMenuId(openMenuId === memberKey ? null : memberKey)}
-                                            >
-                                                <MoreVertical size={18} />
-                                            </button>
+                                        {isAdmin && (
+                                            <td style={{ textAlign: 'right', position: 'relative', overflow: 'visible' }}>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-ghost"
+                                                    onClick={() => setOpenMenuId(openMenuId === memberKey ? null : memberKey)}
+                                                >
+                                                    <MoreVertical size={18} />
+                                                </button>
 
-                                            {openMenuId === memberKey && (
-                                                <>
-                                                    <div
-                                                        style={{ position: 'fixed', inset: 0, zIndex: 999 }}
-                                                        onClick={() => setOpenMenuId(null)}
-                                                    />
-                                                    <div className="dropdown-menu-premium" style={{
-                                                        position: 'absolute',
-                                                        top: 'calc(100% + 4px)',
-                                                        right: 0,
-                                                        minWidth: '160px',
-                                                        padding: '0.4rem',
-                                                        zIndex: 1000,
-                                                    }}>
-                                                        <div style={{ padding: '0.4rem', borderBottom: '1px solid var(--input-border)', marginBottom: '0.2rem' }}>
-                                                            <div className="text-muted" style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Change Role</div>
-                                                            <button onClick={() => handleChangeRole(member, 'Admin')} className="dropdown-item-premium" style={{ opacity: member.role === 'Admin' ? 0.5 : 1 }}>
-                                                                <Shield size={14} /> Admin
-                                                            </button>
-                                                            <button onClick={() => handleChangeRole(member, 'Editor')} className="dropdown-item-premium" style={{ opacity: member.role === 'Editor' ? 0.5 : 1 }}>
-                                                                <Edit size={14} /> Editor
-                                                            </button>
-                                                            <button onClick={() => handleChangeRole(member, 'Viewer')} className="dropdown-item-premium" style={{ opacity: member.role === 'Viewer' ? 0.5 : 1 }}>
-                                                                <Eye size={14} /> Viewer
+                                                {openMenuId === memberKey && (
+                                                    <>
+                                                        <div
+                                                            style={{ position: 'fixed', inset: 0, zIndex: 999 }}
+                                                            onClick={() => setOpenMenuId(null)}
+                                                        />
+                                                        <div className="dropdown-menu-premium" style={{
+                                                            position: 'absolute',
+                                                            top: 'calc(100% + 4px)',
+                                                            right: 0,
+                                                            minWidth: '160px',
+                                                            padding: '0.4rem',
+                                                            zIndex: 1000,
+                                                        }}>
+                                                            <div style={{ padding: '0.4rem', borderBottom: '1px solid var(--input-border)', marginBottom: '0.2rem' }}>
+                                                                <div className="text-muted" style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', fontWeight: 600, textTransform: 'uppercase' }}>Change Role</div>
+                                                                <button onClick={() => handleChangeRole(member, 'Admin')} className="dropdown-item-premium" style={{ opacity: member.role === 'Admin' ? 0.5 : 1 }}>
+                                                                    <Shield size={14} /> Admin
+                                                                </button>
+                                                                <button onClick={() => handleChangeRole(member, 'Editor')} className="dropdown-item-premium" style={{ opacity: member.role === 'Editor' ? 0.5 : 1 }}>
+                                                                    <Edit size={14} /> Editor
+                                                                </button>
+                                                                <button onClick={() => handleChangeRole(member, 'Viewer')} className="dropdown-item-premium" style={{ opacity: member.role === 'Viewer' ? 0.5 : 1 }}>
+                                                                    <Eye size={14} /> Viewer
+                                                                </button>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleRemoveMember(member)}
+                                                                className="dropdown-item-premium"
+                                                                style={{ color: '#ef4444' }}
+                                                            >
+                                                                <UserMinus size={15} />
+                                                                Remove Member
                                                             </button>
                                                         </div>
-                                                        <button
-                                                            onClick={() => handleRemoveMember(member)}
-                                                            className="dropdown-item-premium"
-                                                            style={{ color: '#ef4444' }}
-                                                        >
-                                                            <UserMinus size={15} />
-                                                            Remove Member
-                                                        </button>
-                                                    </div>
-                                                </>
-                                            )}
-                                        </td>
+                                                    </>
+                                                )}
+                                            </td>
+                                        )}
                                     </tr>
                                 );
                             })}

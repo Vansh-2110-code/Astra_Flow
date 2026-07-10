@@ -7,6 +7,7 @@ import { Building2, Palette, Shield, Plug, Bell, AlertTriangle, Check, Loader2, 
 import { updateWorkspace, getWorkspaceDetail, deleteWorkspace, uploadWorkspaceLogo, getWorkspaceMembers } from '../services/workspaceService';
 import { initiateFacebookLogin, initiateInstagramLogin, initiateLinkedInLogin, initiateTwitterLogin, getConnectedChannels, disconnectChannel, verifyChannel, getFacebookPosts } from '../services/channelService';
 import ConnectFacebookButton from '../components/ConnectFacebookButton';
+import { getUserData } from '../services/authService';
 
 const TABS = [
     { id: 'workspace', label: 'Workspace Info', icon: Building2 },
@@ -71,6 +72,7 @@ const Settings = () => {
     const [logoLoading, setLogoLoading] = useState(false);
     const [membersCount, setMembersCount] = useState(0);
     const [postsCount, setPostsCount] = useState(0);
+    const [currentUserRole, setCurrentUserRole] = useState('viewer');
 
     // Initialize integrations from localStorage
     const [integrations, setIntegrations] = useState(() => {
@@ -241,11 +243,18 @@ const Settings = () => {
     useEffect(() => {
         const fetchDetails = async () => {
             if (!workspaceId) return;
+            let workspaceOwnerId = null;
             try {
                 const data = await getWorkspaceDetail(workspaceId);
                 setWorkspaceName(data.name || '');
                 setTimezone(data.timezone || 'Asia/Kolkata');
                 setWorkspaceLogo(data.logo || null);
+                workspaceOwnerId = data.owner_id;
+                
+                const user = getUserData();
+                if (user && workspaceOwnerId === user.id) {
+                    setCurrentUserRole('owner');
+                }
             } catch (err) {
                 console.error('Failed to fetch workspace details:', err);
                 setToast({ type: 'error', message: 'Failed to load workspace settings' });
@@ -255,6 +264,18 @@ const Settings = () => {
             try {
                 const members = await getWorkspaceMembers(workspaceId);
                 setMembersCount(members?.length || 0);
+                
+                const user = getUserData();
+                if (user) {
+                    if (user.id === workspaceOwnerId) {
+                        setCurrentUserRole('owner');
+                    } else {
+                        const currentMember = members.find(m => m.id === user.id || (m.email && m.email.toLowerCase() === user.email.toLowerCase()));
+                        if (currentMember) {
+                            setCurrentUserRole(currentMember.role);
+                        }
+                    }
+                }
             } catch (err) {
                 console.error('Failed to fetch workspace members:', err);
             }
@@ -440,7 +461,7 @@ const Settings = () => {
                     borderRadius: 'var(--radius-lg)',
                     background: 'white'
                 }}>
-                    {TABS.map(({ id, label, icon: Icon }) => (
+                    {TABS.filter(tab => tab.id !== 'roles' || (currentUserRole?.toLowerCase() === 'owner' || currentUserRole?.toLowerCase() === 'admin')).map(({ id, label, icon: Icon }) => (
                         <button
                             key={id}
                             type="button"
@@ -586,7 +607,7 @@ const Settings = () => {
                         </Card>
                     )}
 
-                    {activeTab === 'roles' && (
+                    {activeTab === 'roles' && (currentUserRole?.toLowerCase() === 'owner' || currentUserRole?.toLowerCase() === 'admin') && (
                         <Card>
                             <h3 className="text-h3" style={{ marginBottom: '0.5rem' }}>Roles & Permissions</h3>
                             <p className="text-muted" style={{ marginBottom: '1.5rem' }}>Permission matrix by role for members of this workspace.</p>

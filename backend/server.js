@@ -4,8 +4,11 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const jwt = require('jsonwebtoken');
 const adsSdk = require('facebook-nodejs-business-sdk');
 const { FacebookAdsApi, Page, PagePost, Comment } = adsSdk;
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key-for-lintcollab-jwt-token';
 
 
 // Load environment variables from .env if present
@@ -98,6 +101,79 @@ function saveDB(data) {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
+// Middleware to authenticate JWT access tokens
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ detail: 'Authentication credentials were not provided.' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ detail: 'Given token not valid for any token type.' });
+        }
+        
+        const db = loadDB();
+        const user = db.users.find(u => u.id === decoded.id);
+        if (!user) {
+            return res.status(401).json({ detail: 'User not found.' });
+        }
+        
+        req.user = user;
+        next();
+    });
+}
+
+// Middleware to check if the user belongs to the requested workspace
+function requireWorkspaceMember(req, res, next) {
+    const workspaceId = req.params.workspaceId;
+    if (!workspaceId) {
+        return res.status(400).json({ detail: 'Workspace ID is required.' });
+    }
+    const db = loadDB();
+    const ws = db.workspaces.find(w => w.id === workspaceId);
+    if (!ws) {
+        return res.status(404).json({ detail: 'Workspace not found.' });
+    }
+    const user = req.user;
+    const members = db.members[workspaceId] || [];
+    const isMember = ws.owner_id === user.id || members.some(m => m.id === user.id || (m.email && m.email.toLowerCase() === user.email.toLowerCase()));
+    
+    if (!isMember) {
+        return res.status(403).json({ detail: 'You do not have permission to access this workspace.' });
+    }
+    req.workspace = ws;
+    next();
+}
+
+// Middleware to check if the user belongs to the workspace of the requested channel
+function requireChannelWorkspaceMember(req, res, next) {
+    const channelId = req.params.channelId;
+    if (!channelId) {
+        return res.status(400).json({ detail: 'Channel ID is required.' });
+    }
+    const db = loadDB();
+    const chan = db.channels.find(c => c.id === channelId);
+    if (!chan) {
+        return res.status(404).json({ detail: 'Channel not found.' });
+    }
+    const ws = db.workspaces.find(w => w.id === chan.workspace_id);
+    if (!ws) {
+        return res.status(404).json({ detail: 'Workspace not found for this channel.' });
+    }
+    const user = req.user;
+    const members = db.members[ws.id] || [];
+    const isMember = ws.owner_id === user.id || members.some(m => m.id === user.id || (m.email && m.email.toLowerCase() === user.email.toLowerCase()));
+    
+    if (!isMember) {
+        return res.status(403).json({ detail: 'You do not have permission to access this channel.' });
+    }
+    req.channel = chan;
+    req.workspace = ws;
+    next();
+}
+
 // ── AUTHENTICATION ENDPOINTS ──
 
 // POST /api/register/
@@ -137,9 +213,13 @@ app.post('/api/v1/token/', (req, res) => {
         return res.status(401).json({ detail: 'No active account found with the given credentials' });
     }
 
+    const payload = { id: user.id, email: user.email };
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
+    const refreshToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
     res.json({
-        access: `mock-access-token-${uuidv4()}`,
-        refresh: `mock-refresh-token-${uuidv4()}`,
+        access: accessToken,
+        refresh: refreshToken,
         user: {
             id: user.id,
             email: user.email,
@@ -155,50 +235,63 @@ app.post('/api/v1/token/refresh/', (req, res) => {
     if (!refresh) {
         return res.status(400).json({ detail: 'Refresh token is required' });
     }
-    res.json({
-        access: `mock-new-access-token-${uuidv4()}`
-    });
+    try {
+        const decoded = jwt.verify(refresh, JWT_SECRET);
+        const payload = { id: decoded.id, email: decoded.email };
+        const newAccessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '1d' });
+        res.json({
+            access: newAccessToken
+        });
+    } catch (err) {
+        return res.status(401).json({ detail: 'Token is invalid or expired' });
+    }
 });
 
 // ── USER PROFILE ENDPOINTS ──
 
 // GET /api/user/profile/
-app.get('/api/user/profile/', (req, res) => {
-    // Return the first user by default as mock session
-    const db = loadDB();
-    res.json(db.users[0]);
+app.get('/api/user/profile/', authenticateToken, (req, res) => {
+    res.json(req.user);
 });
 
 // PATCH /api/user/profile/
-app.patch('/api/user/profile/', (req, res) => {
+app.patch('/api/user/profile/', authenticateToken, (req, res) => {
     const db = loadDB();
-    const userIndex = 0; // Default mock user
-    db.users[userIndex] = { ...db.users[userIndex], ...req.body };
+    const idx = db.users.findIndex(u => u.id === req.user.id);
+    if (idx === -1) return res.status(404).json({ detail: 'User not found' });
+    
+    db.users[idx] = { ...db.users[idx], ...req.body };
     saveDB(db);
-    res.json(db.users[userIndex]);
+    res.json(db.users[idx]);
 });
 
 // POST /api/user/profile/avatar/
-app.post('/api/user/profile/avatar/', upload.single('avatar'), (req, res) => {
+app.post('/api/user/profile/avatar/', authenticateToken, upload.single('avatar'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ detail: 'No file uploaded' });
     }
     const db = loadDB();
+    const idx = db.users.findIndex(u => u.id === req.user.id);
+    if (idx === -1) return res.status(404).json({ detail: 'User not found' });
+
     const baseUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
     const avatarUrl = `${baseUrl}/uploads/${req.file.filename}`;
-    db.users[0].avatar = avatarUrl;
+    db.users[idx].avatar = avatarUrl;
     saveDB(db);
     res.json({ message: 'Avatar uploaded successfully', avatar: avatarUrl });
 });
 
 // POST /api/user/change-password/
-app.post('/api/user/change-password/', (req, res) => {
+app.post('/api/user/change-password/', authenticateToken, (req, res) => {
     const { old_password, new_password } = req.body;
     const db = loadDB();
-    if (db.users[0].password !== old_password) {
+    const idx = db.users.findIndex(u => u.id === req.user.id);
+    if (idx === -1) return res.status(404).json({ detail: 'User not found' });
+
+    if (db.users[idx].password !== old_password) {
         return res.status(400).json({ detail: 'Incorrect current password' });
     }
-    db.users[0].password = new_password;
+    db.users[idx].password = new_password;
     saveDB(db);
     res.json({ message: 'Password updated successfully' });
 });
@@ -206,27 +299,40 @@ app.post('/api/user/change-password/', (req, res) => {
 // ── WORKSPACE ENDPOINTS ──
 
 // GET /api/workspaces/workspace/
-app.get('/api/workspaces/workspace/', (req, res) => {
+app.get('/api/workspaces/workspace/', authenticateToken, (req, res) => {
     const db = loadDB();
-    res.json(db.workspaces);
+    const user = req.user;
+    const userWorkspaces = db.workspaces.filter(ws => {
+        if (ws.owner_id === user.id) return true;
+        const members = db.members[ws.id] || [];
+        return members.some(m => m.id === user.id || (m.email && m.email.toLowerCase() === user.email.toLowerCase()));
+    });
+    res.json(userWorkspaces);
 });
 
 // POST /api/workspaces/create/
-app.post('/api/workspaces/create/', (req, res) => {
+app.post('/api/workspaces/create/', authenticateToken, (req, res) => {
     const { name, timezone } = req.body;
     const db = loadDB();
+    const user = req.user;
 
     const newWs = {
         id: `ws-${uuidv4()}`,
         name,
         timezone: timezone || 'UTC',
-        owner_id: 'user-1',
+        owner_id: user.id,
         created_at: new Date().toISOString()
     };
 
     db.workspaces.push(newWs);
     db.members[newWs.id] = [
-        { id: 'user-1', first_name: 'Admin', last_name: 'User', email: 'admin@example.com', role: 'owner' }
+        { 
+            id: user.id, 
+            first_name: user.first_name || 'Admin', 
+            last_name: user.last_name || 'User', 
+            email: user.email, 
+            role: 'owner' 
+        }
     ];
 
     saveDB(db);
@@ -234,20 +340,20 @@ app.post('/api/workspaces/create/', (req, res) => {
 });
 
 // GET /api/workspaces/workspace/:workspaceId/
-app.get('/api/workspaces/workspace/:workspaceId/', (req, res) => {
-    const { workspaceId } = req.params;
-    const db = loadDB();
-    const ws = db.workspaces.find(w => w.id === workspaceId);
-    if (!ws) return res.status(404).json({ detail: 'Workspace not found' });
-    res.json(ws);
+app.get('/api/workspaces/workspace/:workspaceId/', authenticateToken, requireWorkspaceMember, (req, res) => {
+    res.json(req.workspace);
 });
 
 // PATCH /api/workspaces/workspace/:workspaceId/
-app.patch('/api/workspaces/workspace/:workspaceId/', (req, res) => {
+app.patch('/api/workspaces/workspace/:workspaceId/', authenticateToken, requireWorkspaceMember, (req, res) => {
     const { workspaceId } = req.params;
     const db = loadDB();
     const idx = db.workspaces.findIndex(w => w.id === workspaceId);
-    if (idx === -1) return res.status(404).json({ detail: 'Workspace not found' });
+    if (idx === -1) return res.status(404).json({ detail: 'Workspace not found.' });
+
+    if (db.workspaces[idx].owner_id !== req.user.id) {
+        return res.status(403).json({ detail: 'Only the workspace owner can modify this workspace.' });
+    }
 
     db.workspaces[idx] = { ...db.workspaces[idx], ...req.body };
     saveDB(db);
@@ -255,9 +361,16 @@ app.patch('/api/workspaces/workspace/:workspaceId/', (req, res) => {
 });
 
 // DELETE /api/workspaces/workspace/:workspaceId/
-app.delete('/api/workspaces/workspace/:workspaceId/', (req, res) => {
+app.delete('/api/workspaces/workspace/:workspaceId/', authenticateToken, requireWorkspaceMember, (req, res) => {
     const { workspaceId } = req.params;
     const db = loadDB();
+    const idx = db.workspaces.findIndex(w => w.id === workspaceId);
+    if (idx === -1) return res.status(404).json({ detail: 'Workspace not found.' });
+
+    if (db.workspaces[idx].owner_id !== req.user.id) {
+        return res.status(403).json({ detail: 'Only the workspace owner can delete this workspace.' });
+    }
+
     db.workspaces = db.workspaces.filter(w => w.id !== workspaceId);
     delete db.members[workspaceId];
     saveDB(db);
@@ -265,14 +378,14 @@ app.delete('/api/workspaces/workspace/:workspaceId/', (req, res) => {
 });
 
 // POST /api/workspaces/workspace/:workspaceId/logo/
-app.post('/api/workspaces/workspace/:workspaceId/logo/', upload.single('logo'), (req, res) => {
+app.post('/api/workspaces/workspace/:workspaceId/logo/', authenticateToken, requireWorkspaceMember, upload.single('logo'), (req, res) => {
     const { workspaceId } = req.params;
     if (!req.file) {
         return res.status(400).json({ detail: 'No file uploaded' });
     }
     const db = loadDB();
     const idx = db.workspaces.findIndex(w => w.id === workspaceId);
-    if (idx === -1) return res.status(404).json({ detail: 'Workspace not found' });
+    if (idx === -1) return res.status(404).json({ detail: 'Workspace not found.' });
 
     const baseUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
     const logoUrl = `${baseUrl}/uploads/${req.file.filename}`;
@@ -282,27 +395,30 @@ app.post('/api/workspaces/workspace/:workspaceId/logo/', upload.single('logo'), 
 });
 
 // GET /api/workspaces/:workspaceId/members/
-app.get('/api/workspaces/:workspaceId/members/', (req, res) => {
+app.get('/api/workspaces/:workspaceId/members/', authenticateToken, requireWorkspaceMember, (req, res) => {
     const { workspaceId } = req.params;
     const db = loadDB();
     res.json(db.members[workspaceId] || []);
 });
 
 // POST /api/workspaces/:workspaceId/invite/
-app.post('/api/workspaces/:workspaceId/invite/', (req, res) => {
+app.post('/api/workspaces/:workspaceId/invite/', authenticateToken, requireWorkspaceMember, (req, res) => {
     const { workspaceId } = req.params;
     const { email, role } = req.body;
     const db = loadDB();
 
     const currentMembers = db.members[workspaceId] || [];
-    if (currentMembers.find(m => m.email === email)) {
-        return res.status(400).json({ detail: 'User is already a member of this workspace' });
+    if (currentMembers.find(m => m.email.toLowerCase() === email.toLowerCase())) {
+        return res.status(400).json({ detail: 'User is already a member of this workspace.' });
     }
 
+    // Support resolving existing user email when workspace invitation is sent
+    const existingUser = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+
     const newMember = {
-        id: `user-${uuidv4()}`,
-        first_name: email.split('@')[0],
-        last_name: 'Invited',
+        id: existingUser ? existingUser.id : `user-${uuidv4()}`,
+        first_name: existingUser ? existingUser.first_name : email.split('@')[0],
+        last_name: existingUser ? existingUser.last_name : 'Invited',
         email,
         role: role || 'editor'
     };
@@ -315,14 +431,20 @@ app.post('/api/workspaces/:workspaceId/invite/', (req, res) => {
 });
 
 // PATCH /api/workspaces/:workspaceId/members/:memberId/
-app.patch('/api/workspaces/:workspaceId/members/:memberId/', (req, res) => {
+app.patch('/api/workspaces/:workspaceId/members/:memberId/', authenticateToken, requireWorkspaceMember, (req, res) => {
     const { workspaceId, memberId } = req.params;
     const { role } = req.body;
     const db = loadDB();
 
+    // Verify user is owner to update other members
+    const ws = db.workspaces.find(w => w.id === workspaceId);
+    if (ws.owner_id !== req.user.id) {
+        return res.status(403).json({ detail: 'Only workspace owners can modify member roles.' });
+    }
+
     const list = db.members[workspaceId] || [];
     const idx = list.findIndex(m => m.id === memberId);
-    if (idx === -1) return res.status(404).json({ detail: 'Member not found' });
+    if (idx === -1) return res.status(404).json({ detail: 'Member not found.' });
 
     list[idx].role = role;
     db.members[workspaceId] = list;
@@ -332,9 +454,15 @@ app.patch('/api/workspaces/:workspaceId/members/:memberId/', (req, res) => {
 });
 
 // DELETE /api/workspaces/:workspaceId/members/:memberId/
-app.delete('/api/workspaces/:workspaceId/members/:memberId/', (req, res) => {
+app.delete('/api/workspaces/:workspaceId/members/:memberId/', authenticateToken, requireWorkspaceMember, (req, res) => {
     const { workspaceId, memberId } = req.params;
     const db = loadDB();
+
+    // Verify user is owner OR user is removing themselves
+    const ws = db.workspaces.find(w => w.id === workspaceId);
+    if (ws.owner_id !== req.user.id && memberId !== req.user.id) {
+        return res.status(403).json({ detail: 'You do not have permission to remove this member.' });
+    }
 
     const list = db.members[workspaceId] || [];
     db.members[workspaceId] = list.filter(m => m.id !== memberId);
@@ -346,7 +474,7 @@ app.delete('/api/workspaces/:workspaceId/members/:memberId/', (req, res) => {
 // ── SOCIAL CHANNELS ENDPOINTS ──
 
 // GET /api/channels/workspace/:workspaceId/
-app.get('/api/channels/workspace/:workspaceId/', (req, res) => {
+app.get('/api/channels/workspace/:workspaceId/', authenticateToken, requireWorkspaceMember, (req, res) => {
     const { workspaceId } = req.params;
     const db = loadDB();
     const list = db.channels.filter(c => c.workspace_id === workspaceId);
@@ -1095,34 +1223,23 @@ app.get('/api/channels/twitter/login/', (req, res) => {
 });
 
 // DELETE /api/channels/:channelId/disconnect/
-app.delete('/api/channels/:channelId/disconnect/', (req, res) => {
-    const { channelId } = req.params;
+app.delete('/api/channels/:channelId/disconnect/', authenticateToken, requireChannelWorkspaceMember, (req, res) => {
     const db = loadDB();
-    db.channels = db.channels.filter(c => c.id !== channelId);
+    db.channels = db.channels.filter(c => c.id !== req.channel.id);
     saveDB(db);
     res.json({ message: 'Channel disconnected successfully' });
 });
 
 // GET /api/channels/:channelId/
-app.get('/api/channels/:channelId/', (req, res) => {
-    const { channelId } = req.params;
-    const db = loadDB();
-    const chan = db.channels.find(c => c.id === channelId);
-    if (!chan) return res.status(404).json({ detail: 'Channel not found' });
-    res.json(chan);
+app.get('/api/channels/:channelId/', authenticateToken, requireChannelWorkspaceMember, (req, res) => {
+    res.json(req.channel);
 });
 
 // GET /api/channels/:channelId/verify/
-app.get('/api/channels/:channelId/verify/', (req, res) => {
-    const { channelId } = req.params;
-    const db = loadDB();
-    const chan = db.channels.find(c => c.id === channelId);
-    if (!chan) {
-        return res.status(404).json({ verified: false, error: 'Channel not found' });
-    }
-
+app.get('/api/channels/:channelId/verify/', authenticateToken, requireChannelWorkspaceMember, (req, res) => {
+    const chan = req.channel;
     if (chan.platform === 'facebook') {
-        const ws = db.workspaces.find(w => w.id === chan.workspace_id);
+        const ws = req.workspace;
         if (ws && ws.facebook_identifier && ws.facebook_password) {
             return res.json({
                 verified: true,
@@ -1142,22 +1259,23 @@ app.get('/api/channels/:channelId/verify/', (req, res) => {
 // ── POST MANAGEMENT ENDPOINTS ──
 
 // GET /api/channels/:channelId/facebook/posts/
-app.get('/api/channels/:channelId/facebook/posts/', (req, res) => {
-    const { channelId } = req.params;
+app.get('/api/channels/:channelId/facebook/posts/', authenticateToken, requireChannelWorkspaceMember, (req, res) => {
     const db = loadDB();
-    res.json(db.posts[channelId] || []);
+    res.json(db.posts[req.channel.id] || []);
 });
 
 // DELETE /api/channels/:channelId/posts/:postId/
-app.delete('/api/channels/:channelId/posts/:postId/', (req, res) => {
-    const { channelId, postId } = req.params;
+app.delete('/api/channels/:channelId/posts/:postId/', authenticateToken, requireChannelWorkspaceMember, (req, res) => {
+    const { postId } = req.params;
     const db = loadDB();
-    const chanPosts = db.posts[channelId] || [];
-    db.posts[channelId] = chanPosts.filter(p => p.id !== postId);
+    const chanPosts = db.posts[req.channel.id] || [];
+    db.posts[req.channel.id] = chanPosts.filter(p => p.id !== postId);
     saveDB(db);
     res.json({ message: 'Post deleted successfully' });
-});// GET /api/workspaces/:workspaceId/media/
-app.get('/api/workspaces/:workspaceId/media/', (req, res) => {
+});
+
+// GET /api/workspaces/:workspaceId/media/
+app.get('/api/workspaces/:workspaceId/media/', authenticateToken, requireWorkspaceMember, (req, res) => {
     const { workspaceId } = req.params;
     const db = loadDB();
     const channels = db.channels.filter(c => c.workspace_id === workspaceId);
@@ -1202,7 +1320,7 @@ app.get('/api/workspaces/:workspaceId/media/', (req, res) => {
 });
 
 // POST /api/workspaces/:workspaceId/media/upload/
-app.post('/api/workspaces/:workspaceId/media/upload/', upload.single('file'), (req, res) => {
+app.post('/api/workspaces/:workspaceId/media/upload/', authenticateToken, requireWorkspaceMember, upload.single('file'), (req, res) => {
     const { workspaceId } = req.params;
     if (!req.file) {
         return res.status(400).json({ detail: 'No file uploaded' });
@@ -1232,7 +1350,7 @@ app.post('/api/workspaces/:workspaceId/media/upload/', upload.single('file'), (r
 });
 
 // DELETE /api/workspaces/:workspaceId/media/:mediaId/
-app.delete('/api/workspaces/:workspaceId/media/:mediaId/', (req, res) => {
+app.delete('/api/workspaces/:workspaceId/media/:mediaId/', authenticateToken, requireWorkspaceMember, (req, res) => {
     const { workspaceId, mediaId } = req.params;
     const db = loadDB();
     if (db.media && db.media[workspaceId]) {
@@ -1244,8 +1362,7 @@ app.delete('/api/workspaces/:workspaceId/media/:mediaId/', (req, res) => {
 
 
 // POST /api/channels/:channelId/facebook/create-post/
-app.post('/api/channels/:channelId/facebook/create-post/', upload.any(), async (req, res) => {
-    const { channelId } = req.params;
+app.post('/api/channels/:channelId/facebook/create-post/', authenticateToken, requireChannelWorkspaceMember, upload.any(), async (req, res) => {
     const { message, scheduled_time, is_draft, created_by } = req.body;
     const db = loadDB();
 
@@ -1253,7 +1370,7 @@ app.post('/api/channels/:channelId/facebook/create-post/', upload.any(), async (
     const baseUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
     const mediaUrls = files.map(file => `${baseUrl}/uploads/${file.filename}`);
 
-    const channel = db.channels.find(c => c.id === channelId);
+    const channel = req.channel;
     let facebook_post_id = null;
 
     // Check if this is a real channel (has access token) and is direct publishing (no draft, no scheduled time)
@@ -1343,22 +1460,22 @@ app.post('/api/channels/:channelId/facebook/create-post/', upload.any(), async (
         media: mediaUrls,
         comments: [],
         facebook_post_id: facebook_post_id,
-        created_by: created_by || 'Admin User'
+        created_by: `${req.user.first_name} ${req.user.last_name}`.trim() || created_by || 'Admin User'
     };
 
-    const chanPosts = db.posts[channelId] || [];
+    const chanPosts = db.posts[channel.id] || [];
     chanPosts.unshift(newPost);
-    db.posts[channelId] = chanPosts;
+    db.posts[channel.id] = chanPosts;
     saveDB(db);
 
     res.status(201).json(newPost);
 });
 
 // GET /api/channels/:channelId/facebook/posts/:postId/
-app.get('/api/channels/:channelId/facebook/posts/:postId/', (req, res) => {
-    const { channelId, postId } = req.params;
+app.get('/api/channels/:channelId/facebook/posts/:postId/', authenticateToken, requireChannelWorkspaceMember, (req, res) => {
+    const { postId } = req.params;
     const db = loadDB();
-    const post = (db.posts[channelId] || []).find(p => p.id === postId);
+    const post = (db.posts[req.channel.id] || []).find(p => p.id === postId);
     if (!post) return res.status(404).json({ detail: 'Post not found' });
     res.json(post);
 });
@@ -1624,26 +1741,27 @@ async function publishPostToTwitter(channel, post) {
 }
 
 // POST /api/channels/:channelId/posts/:postId/approve/ (Approve/Unapprove post and trigger immediate publish if past-due)
-app.post('/api/channels/:channelId/posts/:postId/approve/', async (req, res) => {
-    const { channelId, postId } = req.params;
+app.post('/api/channels/:channelId/posts/:postId/approve/', authenticateToken, requireChannelWorkspaceMember, async (req, res) => {
+    const { postId } = req.params;
     const { approved } = req.body;
     const db = loadDB();
 
-    const posts = db.posts[channelId] || [];
+    const posts = db.posts[req.channel.id] || [];
     const post = posts.find(p => p.id === postId);
     if (!post) {
         return res.status(404).json({ error: 'Post not found' });
     }
 
+    const approverName = `${req.user.first_name} ${req.user.last_name}`.trim() || 'Admin';
     post.approved = approved === true;
-    post.approvedBy = approved === true ? ['Admin'] : [];
+    post.approvedBy = approved === true ? [approverName] : [];
 
     let publishedMessage = '';
     if (post.approved && post.status === 'scheduled') {
         const scheduledTime = post.scheduled_time ? new Date(post.scheduled_time) : null;
         if (!scheduledTime || scheduledTime <= new Date()) {
             try {
-                const channel = db.channels.find(c => c.id === channelId);
+                const channel = req.channel;
                 const publishedId = channel.platform === 'instagram'
                     ? await publishPostToInstagram(channel, post)
                     : channel.platform === 'linkedin'
@@ -1907,14 +2025,21 @@ async function replyToComment(pageToken, commentId, message) {
 
 
 // GET /api/notifications
-app.get('/api/notifications', (req, res) => {
+app.get('/api/notifications', authenticateToken, (req, res) => {
     const db = loadDB();
     const notifications = db.notifications || [];
-    res.json(notifications);
+    const user = req.user;
+    const isUserAdmin = user.email === 'admin@example.com' || user.id === 'user-1';
+    
+    const filtered = notifications.filter(n => {
+        if (isUserAdmin && n.recipient === 'Admin') return true;
+        return n.recipient === user.first_name || n.recipient === user.email || n.recipient === `${user.first_name} ${user.last_name}`.trim();
+    });
+    res.json(filtered);
 });
 
 // POST /api/notifications
-app.post('/api/notifications', (req, res) => {
+app.post('/api/notifications', authenticateToken, (req, res) => {
     const db = loadDB();
     db.notifications = db.notifications || [];
     const newNotif = {
@@ -1929,7 +2054,7 @@ app.post('/api/notifications', (req, res) => {
 });
 
 // POST /api/notifications/:id/read
-app.post('/api/notifications/:id/read', (req, res) => {
+app.post('/api/notifications/:id/read', authenticateToken, (req, res) => {
     const { id } = req.params;
     const db = loadDB();
     db.notifications = db.notifications || [];
@@ -1942,9 +2067,20 @@ app.post('/api/notifications/:id/read', (req, res) => {
 });
 
 // POST /api/notifications/clear
-app.post('/api/notifications/clear', (req, res) => {
+app.post('/api/notifications/clear', authenticateToken, (req, res) => {
     const db = loadDB();
-    db.notifications = [];
+    const notifications = db.notifications || [];
+    const user = req.user;
+    const isUserAdmin = user.email === 'admin@example.com' || user.id === 'user-1';
+
+    db.notifications = notifications.filter(n => {
+        const belongsToUser = (isUserAdmin && n.recipient === 'Admin') ||
+            n.recipient === user.first_name || 
+            n.recipient === user.email || 
+            n.recipient === `${user.first_name} ${user.last_name}`.trim();
+        return !belongsToUser;
+    });
+    
     saveDB(db);
     res.json({ success: true });
 });
