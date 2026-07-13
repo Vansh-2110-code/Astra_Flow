@@ -11,6 +11,18 @@
       "dob": "1990-01-01",
       "gender": "other",
       "avatar": null
+    },
+    {
+      "id": "user-e6a310d8-d881-4bd1-98fa-c46a4a8abb7c",
+      "email": "vanshgoyal.cc12345@gmail.com",
+      "password": "Vansh@2110",
+      "first_name": "Vansh",
+      "last_name": "Goyal",
+      "timezone": "Asia/Kolkata",
+      "phone": "",
+      "dob": "",
+      "gender": "other",
+      "avatar": null
     }
   ],
   "workspaces": [
@@ -23,7 +35,8 @@
       "facebook_app_id": "mock_app_id",
       "facebook_app_secret": "mock_app_secret",
       "facebook_identifier": "9993523379",
-      "facebook_password": "Edu@123456"
+      "facebook_password": "Edu@123456",
+      "logo": "http://localhost:8000/uploads/1783682541831-sanna logo_golden_New.png"
     },
     {
       "id": "ws-1e4685c1-6fde-4eca-9314-e0298e3e58b3",
@@ -41,6 +54,13 @@
         "last_name": "User",
         "email": "admin@example.com",
         "role": "owner"
+      },
+      {
+        "id": "user-e0258a39-50d0-483f-a545-4dabe112080b",
+        "first_name": "vanshgoyal.cc12345",
+        "last_name": "Invited",
+        "email": "vanshgoyal.cc12345@gmail.com",
+        "role": "editor"
       }
     ],
     "ws-1e4685c1-6fde-4eca-9314-e0298e3e58b3": [
@@ -209,18 +229,21 @@
     ],
     "chan-38b8cd45-a81c-49c8-ba8d-d0f28d3e4192": [
       {
-        "id": "post-f31f6a4b-e25d-44ab-94d6-5f0772d1739e",
-        "message": "",
-        "scheduled_time": "2026-07-09T06:33:00Z",
-        "status": "scheduled",
-        "approved": false,
-        "approvedBy": [],
-        "created_at": "2026-07-09T09:31:24.526Z",
+        "id": "post-0a018946-dd1b-4fcb-9921-a7143a220c58",
+        "message": "📸 Photo details captured perfectly. 🚀 Big moves today! Bringing vision to reality. It's the small steps that lead to big milestones. Let's make this week unforgettable! 🔥",
+        "scheduled_time": "2026-07-10T10:12:00Z",
+        "status": "published",
+        "approved": true,
+        "approvedBy": [
+          "Admin"
+        ],
+        "created_at": "2026-07-10T10:09:19.417Z",
         "media": [
-          "http://localhost:8000/uploads/1783589484520-WhatsApp Image 2026-07-09 at 10.51.09 AM.jpeg"
+          "http://localhost:8000/uploads/1783678159397-WhatsApp Image 2026-07-09 at 10.51.09 AM.jpeg"
         ],
         "comments": [],
-        "facebook_post_id": null
+        "facebook_post_id": "1436802918471132",
+        "created_by": "Admin User"
       },
       {
         "id": "post-e0a9fc04-7d4e-4f42-bd57-a44099da0136",
@@ -253,5 +276,57 @@
         "size": "1.9 MB"
       }
     ]
-  }
+  },
+  "notifications": [
+    {
+      "id": 1783678159427,
+      "timestamp": "2026-07-10T10:09:19.427Z",
+      "isRead": true,
+      "recipient": "Admin",
+      "type": "post",
+      "message": "Admin created a new post waiting for approval",
+      "relatedPostId": "post-0a018946-dd1b-4fcb-9921-a7143a220c58",
+      "createdBy": "Admin"
+    },
+    {
+      "id": 1783678339416,
+      "timestamp": "2026-07-10T10:12:19.415Z",
+      "isRead": false,
+      "type": "approval",
+      "message": "Scheduled post by Admin User was successfully published to facebook",
+      "relatedPostId": "post-0a018946-dd1b-4fcb-9921-a7143a220c58",
+      "createdBy": "System",
+      "recipient": "Admin"
+    },
+    {
+      "id": 1783678351225,
+      "timestamp": "2026-07-10T10:12:31.225Z",
+      "isRead": false,
+      "recipient": "Sanna Innovations",
+      "type": "approval",
+      "message": "Your post has been approved by Admin",
+      "relatedPostId": "fb_api_post-0a018946-dd1b-4fcb-9921-a7143a220c58",
+      "createdBy": "Admin"
+    },
+    {
+      "id": 1783678351229,
+      "timestamp": "2026-07-10T10:12:31.229Z",
+      "isRead": false,
+      "recipient": "Sanna Innovations",
+      "type": "approval",
+      "message": "Your post has been approved by Admin",
+      "relatedPostId": "fb_api_post-0a018946-dd1b-4fcb-9921-a7143a220c58",
+      "createdBy": "Admin"
+    },
+    {
+      "id": 1783680392712,
+      "timestamp": "2026-07-10T10:46:32.712Z",
+      "isRead": false,
+      "recipient": "Admin",
+      "type": "post",
+      "message": "Admin created a new post waiting for approval",
+      "relatedPostId": "post-52d8a2f7-257f-4029-a14b-da389d087d39",
+      "createdBy": "Admin"
+    }
+  ]
 }
