@@ -516,7 +516,7 @@ app.get('/api/channels/facebook/login/', (req, res) => {
         return res.redirect(`/api/channels/facebook/mock-login/?state=${state}`);
     }
 
-    const callbackUri = `http://localhost:${PORT}/api/channels/facebook/callback/`;
+    const callbackUri = (process.env.BACKEND_URL ? `${process.env.BACKEND_URL.replace(/\/$/, '')}/api/channels/facebook/callback/` : `http://localhost:${PORT}/api/channels/facebook/callback/`);
     let fbOAuthUrl;
     if (configId) {
         fbOAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(callbackUri)}&config_id=${configId}&state=${state}&response_type=code&override_default_response_type=true`;
@@ -755,7 +755,7 @@ app.post('/api/channels/facebook/save-credentials-and-login/', (req, res) => {
 app.get('/api/channels/facebook/callback/', async (req, res) => {
     const { state, code, error, error_description } = req.query;
     let workspace_id = 'ws-1';
-    let redirect_uri = `http://localhost:5173/workspace/${workspace_id}/settings`;
+    let redirect_uri = (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/workspace/${workspace_id}/settings` : `http://localhost:5173/workspace/${workspace_id}/settings`);
 
     if (state) {
         try {
@@ -827,7 +827,7 @@ app.get('/api/channels/facebook/callback/', async (req, res) => {
             appSecret = process.env.FACEBOOK_APP_SECRET;
         }
 
-        const tokenCallbackUri = `http://localhost:${PORT}/api/channels/facebook/callback/`;
+        const tokenCallbackUri = (process.env.BACKEND_URL ? `${process.env.BACKEND_URL.replace(/\/$/, '')}/api/channels/facebook/callback/` : `http://localhost:${PORT}/api/channels/facebook/callback/`);
         console.log(`[OAuth Debug] Exchanging code: ${code}`);
         
         const tokenRes = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&redirect_uri=${encodeURIComponent(tokenCallbackUri)}&code=${code}`);
@@ -989,7 +989,7 @@ app.get('/api/channels/instagram/login/', (req, res) => {
     // Real OAuth flow redirect for Instagram (via Facebook Login with Instagram scopes)
     const stateObj = { workspace_id: workspace_id || 'ws-1', redirect_uri, is_instagram: true };
     const state = Buffer.from(JSON.stringify(stateObj)).toString('base64url');
-    const callbackUri = `http://localhost:${PORT}/api/channels/facebook/callback/`;
+    const callbackUri = (process.env.BACKEND_URL ? `${process.env.BACKEND_URL.replace(/\/$/, '')}/api/channels/facebook/callback/` : `http://localhost:${PORT}/api/channels/facebook/callback/`);
     let fbOAuthUrl;
     if (configId) {
         fbOAuthUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(callbackUri)}&config_id=${configId}&state=${state}&response_type=code&override_default_response_type=true`;
@@ -1036,7 +1036,7 @@ app.get('/api/channels/linkedin/login/', (req, res) => {
     saveDB(db);
 
     const clientPort = 5173;
-    const targetUrl = redirect_uri || `http://localhost:${clientPort}/workspace/${workspace_id}/settings`;
+    const targetUrl = redirect_uri || (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/workspace/${workspace_id}/settings` : `http://localhost:${clientPort}/workspace/${workspace_id}/settings`);
     const finalUrl = targetUrl.includes('?') ? `${targetUrl}&linkedin=success` : `${targetUrl}?linkedin=success`;
     res.redirect(finalUrl);
 });
@@ -1059,7 +1059,7 @@ app.get('/api/channels/linkedin/callback/', async (req, res) => {
     }
 
     const clientPort = 5173;
-    const fallbackTargetUrl = frontendRedirectUri || `http://localhost:${clientPort}/workspace/${workspaceId}/settings`;
+    const fallbackTargetUrl = frontendRedirectUri || (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/workspace/${workspaceId}/settings` : `http://localhost:${clientPort}/workspace/${workspaceId}/settings`);
 
     if (error) {
         console.error('LinkedIn OAuth error:', error, error_description);
@@ -1217,7 +1217,7 @@ app.get('/api/channels/twitter/login/', (req, res) => {
     saveDB(db);
 
     const clientPort = 5173;
-    const targetUrl = redirect_uri || `http://localhost:${clientPort}/workspace/${workspace_id}/settings`;
+    const targetUrl = redirect_uri || (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/workspace/${workspace_id}/settings` : `http://localhost:${clientPort}/workspace/${workspace_id}/settings`);
     const finalUrl = targetUrl.includes('?') ? `${targetUrl}&twitter=success` : `${targetUrl}?twitter=success`;
     res.redirect(finalUrl);
 });
@@ -1825,11 +1825,11 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
 
     if (error || !code) {
         console.error('OAuth redirect error:', error, error_description);
-        return res.redirect(`http://localhost:5173/workspace?facebook=error`);
+        return res.redirect(process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/workspace?facebook=error` : `http://localhost:5173/workspace?facebook=error`);
     }
 
     let workspaceId = 'ws-1';
-    let redirectUri = `http://localhost:5173/workspace/${workspaceId}/settings`;
+    let redirectUri = process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/workspace/${workspaceId}/settings` : `http://localhost:5173/workspace/${workspaceId}/settings`;
     try {
         if (state) {
             const decodedState = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
@@ -1885,7 +1885,8 @@ app.get('/api/auth/facebook/callback', async (req, res) => {
         const appSecret = process.env.FACEBOOK_APP_SECRET;
 
         // Step 1: Exchange temporary code for short-lived User Access Token
-        const tokenRes = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&redirect_uri=${encodeURIComponent(`http://localhost:${PORT}/api/auth/facebook/callback`)}&code=${code}`);
+        const tokenCallbackUri = process.env.BACKEND_URL ? `${process.env.BACKEND_URL.replace(/\/$/, '')}/api/auth/facebook/callback` : `http://localhost:${PORT}/api/auth/facebook/callback`;
+        const tokenRes = await fetch(`https://graph.facebook.com/v18.0/oauth/access_token?client_id=${appId}&client_secret=${appSecret}&redirect_uri=${encodeURIComponent(tokenCallbackUri)}&code=${code}`);
         const tokenData = await tokenRes.json();
 
         if (!tokenRes.ok || !tokenData.access_token) {
