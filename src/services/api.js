@@ -5,8 +5,23 @@ import axios from 'axios';
 import { logout } from './authService';
 import { mapError } from './errorMapper';
 
+const getBaseURL = () => {
+    const envUrl = import.meta.env.VITE_API_BASE_URL;
+    const isCurrentLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (envUrl) {
+        const hasLocalhost = envUrl.includes('localhost') || envUrl.includes('127.0.0.1');
+        if (isCurrentLocal || !hasLocalhost) {
+            return `${envUrl.trim().replace(/\/$/, '')}/api`;
+        }
+    }
+    
+    const fallbackHost = isCurrentLocal ? 'http://localhost:8000' : window.location.origin;
+    return `${fallbackHost}/api`;
+};
+
 const api = axios.create({
-    baseURL: `${(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/$/, '')}/api`,
+    baseURL: getBaseURL(),
     headers: {
         'Accept': 'application/json',
     },
@@ -42,8 +57,32 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
+const sanitizeResponseData = (data, targetHost) => {
+    if (typeof data === 'string') {
+        return data.replace(/http:\/\/localhost:8000/g, targetHost);
+    }
+    if (Array.isArray(data)) {
+        return data.map(item => sanitizeResponseData(item, targetHost));
+    }
+    if (data !== null && typeof data === 'object') {
+        const sanitized = {};
+        for (const key of Object.keys(data)) {
+            sanitized[key] = sanitizeResponseData(data[key], targetHost);
+        }
+        return sanitized;
+    }
+    return data;
+};
+
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        const isCurrentLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (!isCurrentLocal && response.data) {
+            const backendHost = api.defaults.baseURL.replace(/\/api$/, '');
+            response.data = sanitizeResponseData(response.data, backendHost);
+        }
+        return response;
+    },
     async (error) => {
         const originalRequest = error.config;
 

@@ -10,7 +10,20 @@ import Button from './ui/Button';
  */
 const ConnectFacebookButton = ({ workspaceId, variant = 'outline', style }) => {
     const handleConnect = () => {
-        const backendUrl = import.meta.env.VITE_API_BASE_URL || (window.location.hostname === 'localhost' ? 'http://localhost:8000' : window.location.origin);
+        const envUrl = import.meta.env.VITE_API_BASE_URL;
+        const isCurrentLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        let backendUrl;
+        if (envUrl) {
+            const hasLocalhost = envUrl.includes('localhost') || envUrl.includes('127.0.0.1');
+            if (isCurrentLocal || !hasLocalhost) {
+                backendUrl = envUrl.trim().replace(/\/$/, '');
+            }
+        }
+        
+        if (!backendUrl) {
+            backendUrl = isCurrentLocal ? 'http://localhost:8000' : window.location.origin;
+        }
         const currentUri = window.location.href;
 
         // Bundle workspace contextual info in state
