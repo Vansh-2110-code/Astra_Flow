@@ -756,20 +756,22 @@ app.get('/api/channels/facebook/callback/', async (req, res) => {
     const { state, code, error, error_description } = req.query;
     let workspace_id = 'ws-1';
     let redirect_uri = (process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL.replace(/\/$/, '')}/workspace/${workspace_id}/settings` : `http://localhost:5173/workspace/${workspace_id}/settings`);
+    let decodedState = {};
 
     if (state) {
         try {
-            const decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
-            workspace_id = decoded.workspace_id || workspace_id;
-            redirect_uri = decoded.redirect_uri || redirect_uri;
+            decodedState = JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
+            workspace_id = decodedState.workspace_id || workspace_id;
+            redirect_uri = decodedState.redirect_uri || redirect_uri;
         } catch (err) {
             console.error("Failed to decode OAuth state:", err);
         }
     }
 
+    const targetPlatform = decodedState.is_instagram ? 'instagram' : 'facebook';
+
     if (code === 'mock_code') {
         const db = loadDB();
-        const decodedState = state ? JSON.parse(Buffer.from(state, 'base64url').toString('utf-8')) : {};
         const isInstagram = decodedState.is_instagram;
         const ws = db.workspaces.find(w => w.id === workspace_id);
         const nameOrPhone = ws?.facebook_identifier || ws?.facebook_email || 'Facebook Account';
@@ -809,7 +811,7 @@ app.get('/api/channels/facebook/callback/', async (req, res) => {
 
     if (error || !code) {
         console.error("Facebook OAuth callback error:", error, error_description);
-        const finalUrl = redirect_uri.includes('?') ? `${redirect_uri}&facebook=error` : `${redirect_uri}?facebook=error`;
+        const finalUrl = redirect_uri.includes('?') ? `${redirect_uri}&${targetPlatform}=error` : `${redirect_uri}?${targetPlatform}=error`;
         return res.redirect(finalUrl);
     }
 
@@ -912,7 +914,7 @@ app.get('/api/channels/facebook/callback/', async (req, res) => {
                         name: igAcc.name || igAcc.username,
                         platform: 'instagram',
                         page_name: igAcc.username,
-                        profile_picture: igAcc.profile_picture_url || 'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=150',
+                        profile_picture: igAcc.profile_picture_url || 'https://images.unsplash.com/photo-16111616305-c69b3fa7fbe0?w=150',
                         workspace_id: workspace_id,
                         instagram_account_id: igAcc.id,
                         facebook_page_id: page.id,
@@ -925,9 +927,13 @@ app.get('/api/channels/facebook/callback/', async (req, res) => {
                         db.channels.push(igChannel);
                     }
                     connectedInstagramCount++;
+                } else if (!igRes.ok) {
+                    console.error(`Failed to fetch connected Instagram account for page ${page.id}:`, igData.error || igData);
+                    fs.appendFileSync(path.join(__dirname, 'oauth_debug.log'), `Failed to fetch Instagram account for page ${page.id}: ${JSON.stringify(igData.error || igData)}\n\n`);
                 }
             } catch (igErr) {
                 console.error(`Failed to fetch connected Instagram account for page ${page.id}:`, igErr);
+                fs.appendFileSync(path.join(__dirname, 'oauth_debug.log'), `Failed to fetch Instagram account for page ${page.id}: ${igErr.message}\n\n`);
             }
         }
 
@@ -935,26 +941,21 @@ app.get('/api/channels/facebook/callback/', async (req, res) => {
 
         fs.appendFileSync(path.join(__dirname, 'oauth_debug.log'), `Summary: connectedFacebookCount=${connectedFacebookCount}, connectedInstagramCount=${connectedInstagramCount}\n\n`);
 
-        // Determine correct return platform success param based on state/connections
-        let successPlatform = 'facebook';
-        const decodedState = state ? JSON.parse(Buffer.from(state, 'base64url').toString('utf-8')) : {};
-        if (decodedState.is_instagram || (connectedInstagramCount > 0 && connectedFacebookCount === 0)) {
-            successPlatform = 'instagram';
-        }
+        // Check if the integration was successful for the requested platform
+        const isSuccess = decodedState.is_instagram ? (connectedInstagramCount > 0) : (connectedFacebookCount > 0);
 
-        // If no pages were connected, return an error redirect so the UI shows failure
-        if (connectedFacebookCount === 0 && connectedInstagramCount === 0) {
-            fs.appendFileSync(path.join(__dirname, 'oauth_debug.log'), `No channels were successfully created/connected. Redirecting with facebook=error.\n\n`);
-            const finalUrl = redirect_uri.includes('?') ? `${redirect_uri}&facebook=error` : `${redirect_uri}?facebook=error`;
+        if (!isSuccess) {
+            fs.appendFileSync(path.join(__dirname, 'oauth_debug.log'), `No channels of platform ${targetPlatform} were successfully created/connected. Redirecting with ${targetPlatform}=error.\n\n`);
+            const finalUrl = redirect_uri.includes('?') ? `${redirect_uri}&${targetPlatform}=error` : `${redirect_uri}?${targetPlatform}=error`;
             return res.redirect(finalUrl);
         }
 
-        const finalUrl = redirect_uri.includes('?') ? `${redirect_uri}&${successPlatform}=success` : `${redirect_uri}?${successPlatform}=success`;
+        const finalUrl = redirect_uri.includes('?') ? `${redirect_uri}&${targetPlatform}=success` : `${redirect_uri}?${targetPlatform}=success`;
         res.redirect(finalUrl);
     } catch (oauthErr) {
         console.error("Facebook integration failed:", oauthErr);
         fs.writeFileSync(path.join(__dirname, 'oauth_error.log'), `${new Date().toISOString()} - Facebook integration failed: ${oauthErr.message}\nStack: ${oauthErr.stack}\n`);
-        const finalUrl = redirect_uri.includes('?') ? `${redirect_uri}&facebook=error` : `${redirect_uri}?facebook=error`;
+        const finalUrl = redirect_uri.includes('?') ? `${redirect_uri}&${targetPlatform}=error` : `${redirect_uri}?${targetPlatform}=error`;
         res.redirect(finalUrl);
     }
 });
