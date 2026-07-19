@@ -10,12 +10,14 @@ const AIAssistantPanel = ({
     showFirstComment,
     setShowFirstComment
 }) => {
-    const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
+    const [apiKey, setApiKey] = useState(() => {
+        return localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
+    });
     const [tempKey, setTempKey] = useState(apiKey);
     const [isKeyEditing, setIsKeyEditing] = useState(!apiKey);
     const [tone, setTone] = useState('Exciting');
     const [goal, setGoal] = useState('Drive Engagement');
-    const [platform, setPlatform] = useState('Instagram');
+    const [selectedPlatforms, setSelectedPlatforms] = useState(['Instagram']);
     const [hashtagsCount, setHashtagsCount] = useState('5-10');
     const [customPrompt, setCustomPrompt] = useState('');
 
@@ -43,10 +45,11 @@ const AIAssistantPanel = ({
             toast.success('Gemini API key saved successfully!');
         } else {
             localStorage.removeItem('gemini_api_key');
-            setApiKey('');
-            setIsKeyEditing(true);
-            setUseMock(true);
-            toast.error('API key cleared. Switched to Mock AI mode.');
+            const envKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+            setApiKey(envKey);
+            setIsKeyEditing(!envKey);
+            setUseMock(!envKey);
+            toast.error(envKey ? 'API key cleared. Using environment API key.' : 'API key cleared. Switched to Mock AI mode.');
         }
     };
 
@@ -64,13 +67,31 @@ const AIAssistantPanel = ({
             const url = mediaItem.url;
             if (url.startsWith('data:')) {
                 imageBase64 = url.split(',')[1];
+            } else {
+                try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    imageBase64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                            const base64data = reader.result.split(',')[1];
+                            resolve(base64data);
+                        };
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (fetchErr) {
+                    console.error("Failed to fetch image URL and convert to Base64:", fetchErr);
+                }
             }
         }
+
+        const platformsStr = selectedPlatforms.join(', ');
 
         if (useMock || !apiKey) {
             // Simulate API request delay
             setTimeout(() => {
-                const mockResults = generateMockSuggestions(tone, goal, platform, hashtagsCount, customPrompt, hasImage);
+                const mockResults = generateMockSuggestions(tone, goal, platformsStr, hashtagsCount, customPrompt, hasImage);
                 setSuggestions(mockResults);
                 setIsGenerating(false);
                 toast.success('Mock AI suggestions generated!');
@@ -82,27 +103,38 @@ const AIAssistantPanel = ({
             const model = 'gemini-1.5-flash';
             const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-            let promptText = `You are a social media copywriter and growth expert. Generate exactly 3 highly engaging, creative caption options and a separate list of optimized hashtags for a social media post.
-Target Platform: ${platform}
+            let promptText = `You are a social media copywriter and growth expert. Generate exactly 3 highly engaging, SEO-optimized, creative caption options and a separate list of optimized hashtags for a social media post.
+Target Platform(s): ${platformsStr}
 Tone/Style: ${tone}
 Goal/Call-To-Action: ${goal}
 Hashtags Count requested: ${hashtagsCount}
-${customPrompt ? `Additional instructions/context from the user: "${customPrompt}"` : ''}
-${hasImage ? 'An image is attached to this post. Please analyze the content/subject of this image and write captions highly specific to what is visible in the photo.' : ''}
+
+SEO Optimization:
+- Integrate highly relevant SEO keywords naturally into each caption to maximize reach, search visibility, and indexability on the target platforms.
+- Ensure captions have strong, engaging hooks and clear call-to-actions.
+
+Platform Compatibility:
+- Since multiple platforms are selected (${platformsStr}), ensure each generated caption option is fully relevant and compatible across all of these target platforms simultaneously.
+
+Image Content:
+- ${hasImage ? 'An image is attached to this post. You MUST analyze the details, subject, objects, colors, and context of this image. Write captions that are highly specific to what is visible in the photo. Do not output generic captions.' : 'Write engaging captions relevant to the post topic.'}
+
+Custom Context:
+- ${customPrompt ? `Additional instructions/context from the user: "${customPrompt}"` : ''}
 
 You MUST return ONLY a valid JSON object matching the schema below. No markdown wrapping (like \`\`\`json), no preamble, no tailing text.
 {
   "suggestions": [
     {
-      "caption": "Creative caption option 1 here...",
+      "caption": "Creative caption option 1 here (SEO optimized)...",
       "hashtags": ["hashtag1", "hashtag2", "hashtag3"]
     },
     {
-      "caption": "Creative caption option 2 here...",
+      "caption": "Creative caption option 2 here (SEO optimized)...",
       "hashtags": ["hashtag4", "hashtag5", "hashtag6"]
     },
     {
-      "caption": "Creative caption option 3 here...",
+      "caption": "Creative caption option 3 here (SEO optimized)...",
       "hashtags": ["hashtag7", "hashtag8", "hashtag9"]
     }
   ]
@@ -159,7 +191,7 @@ You MUST return ONLY a valid JSON object matching the schema below. No markdown 
             console.error("AI Generation Error:", err);
             toast.error(`API Error: ${err.message}. Falling back to Mock AI.`);
             // Fallback immediately to mock
-            const mockResults = generateMockSuggestions(tone, goal, platform, hashtagsCount, customPrompt, hasImage);
+            const mockResults = generateMockSuggestions(tone, goal, platformsStr, hashtagsCount, customPrompt, hasImage);
             setSuggestions(mockResults);
         } finally {
             setIsGenerating(false);
@@ -174,63 +206,131 @@ You MUST return ONLY a valid JSON object matching the schema below. No markdown 
     };
 
     const generateMockSuggestions = (tone, goal, platform, hashtags, customPrompt, hasImage) => {
-        // High quality rules-based mock data that adapts to selections
-        const baseTopics = [
-            "Bringing vision to reality. It's the small steps that lead to big milestones.",
-            "Behind every great brand is a team that refuses to compromise on quality.",
-            "Creating experiences, not just products. What drives your passion today?",
-        ];
-
-        let prefix = "";
-        let suffix = "";
-        let tags = [];
-
-        if (tone === 'Exciting') {
-            prefix = "🚀 Big moves today! ";
-            suffix = " Let's make this week unforgettable! 🔥";
-            tags = ["#LevelUp", "#GrowthMindset", "#Excitement", "#NextLevel"];
-        } else if (tone === 'Professional') {
-            prefix = "📈 Strategic execution. ";
-            suffix = " Focused on long-term value and optimization.";
-            tags = ["#BusinessStrategy", "#Leadership", "#ProfessionalGrowth", "#Innovation"];
-        } else if (tone === 'Witty') {
-            prefix = "☕ Ninety percent of coding is debugging. The other ten percent is staring at this post. ";
-            suffix = " You're welcome. 😉";
-            tags = ["#ProgrammerHumor", "#TechLife", "#WittyCaption", "#OfficeVibes"];
-        } else if (tone === 'Informative') {
-            prefix = "💡 Did you know? Consistent posting boosts organic visibility by 3x. ";
-            suffix = " Here's your daily reminder to keep building.";
-            tags = ["#KnowledgeIsPower", "#FactOfTheDay", "#LearnTech", "#SocialMediaTips"];
-        } else {
-            prefix = "✨ Striving for progress. ";
-            suffix = " Hope everyone is having an amazing day!";
-            tags = ["#DailyInspiration", "#Vibes", "#KeepGoing", "#GoodLife"];
+        // Dynamic image content extraction
+        let imageContext = '';
+        if (hasImage && uploadedMedia && uploadedMedia[currentMediaIndex]) {
+            const mediaItem = uploadedMedia[currentMediaIndex];
+            const fileName = mediaItem.file?.name || mediaItem.libraryItem?.name || mediaItem.libraryItem?.filename || '';
+            if (fileName) {
+                const baseName = fileName.substring(0, fileName.lastIndexOf('.')) || fileName;
+                imageContext = baseName.replace(/[-_]+/g, ' ').replace(/[0-9]+/g, '').trim();
+            }
         }
 
-        if (platform === 'LinkedIn') {
-            suffix += " #networking #industryinsights";
-        }
+        // Clean tone and goal for hashtags
+        const toHashtag = (str) => {
+            if (!str) return '';
+            return str
+                .replace(/[^a-zA-Z0-9\s]/g, '')
+                .split(/\s+/)
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join('');
+        };
 
+        const keywords = [];
         if (customPrompt) {
-            prefix = `✨ Re: "${customPrompt}" — ` + prefix;
+            customPrompt.split(/[,\s;\n]+/).forEach(k => {
+                const clean = k.trim().toLowerCase();
+                if (clean && clean.length > 2) keywords.push(clean);
+            });
+        }
+        if (imageContext) {
+            imageContext.split(/\s+/).forEach(k => {
+                const clean = k.trim().toLowerCase();
+                if (clean && clean.length > 2) keywords.push(clean);
+            });
         }
 
-        if (hasImage) {
-            prefix = "📸 Photo details captured perfectly. " + prefix;
+        const uniqueKeywords = [...new Set(keywords)];
+        if (uniqueKeywords.length === 0) {
+            uniqueKeywords.push("growth", "success", "digital", "branding");
         }
+
+        const keyword1 = uniqueKeywords[0] || "innovation";
+        const keyword2 = uniqueKeywords[1] || uniqueKeywords[0] || "success";
+        const keyword3 = uniqueKeywords[2] || uniqueKeywords[0] || "strategy";
+
+        const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+        const toneTemplates = {
+            Exciting: [
+                `🚀 Elevate your brand with ${capitalize(keyword1)}! Let's leverage the power of ${keyword2} to drive unmatched engagement. The future belongs to those who execute on ${keyword3}! 🔥`,
+                `✨ BIG moves! We are diving deep into ${keyword1} and ${keyword2} today. It's the small, consistent steps in ${keyword3} that lead to massive milestones. Who's ready? 🚀`,
+                `🔥 Ready to level up your ${keyword1} game? Harnessing ${keyword2} is the ultimate hack for rapid growth. Let's make this week unforgettable! 💥`
+            ],
+            Professional: [
+                `📈 Strategic implementation of ${keyword1} is essential for sustainable growth. Focusing on ${keyword2} and ${keyword3} ensures optimal performance and ROI.`,
+                `💼 Delivering long-term value through calculated ${keyword1} initiatives. Consistent optimization of ${keyword2} and ${keyword3} leads to organizational success.`,
+                `🔍 Analysis of recent trends shows that prioritizing ${keyword1} coupled with modern ${keyword2} strategies drives sustainable competitive advantage.`
+            ],
+            Witty: [
+                `☕ Ninety percent of doing ${keyword1} is debugging. The other ten percent is explaining to others why ${keyword2} is actually working. 😉`,
+                `🤖 We tried explaining the importance of ${keyword1} to our server. It gave us a 418 I'm a teapot error. So here's a post about ${keyword2} instead. You're welcome.`,
+                `⚡ Keeping it simple: ${capitalize(keyword1)} is code for "I have no idea why this works, but let's do more of it." Sharing some ${keyword2} inspiration today! 🧠`
+            ],
+            Informative: [
+                `💡 Fact: Integrating ${keyword1} into your daily workflow boosts overall visibility by 3x. Pairing it with ${keyword2} and ${keyword3} forms a high-impact strategy.`,
+                `📚 Quick guide: To succeed in ${keyword1}, always focus on refining your ${keyword2} processes. Here's a breakdown of how ${keyword3} can accelerate your outcomes.`,
+                `🧠 Industry Insight: A data-driven approach to ${keyword1} remains the most effective way to align ${keyword2} objectives with user satisfaction.`
+            ],
+            Casual: [
+                `✨ Hanging out and working on some ${keyword1} ideas today. Honestly, the blend of ${keyword2} and ${keyword3} makes for a really fun project!`,
+                `☕ Quick coffee break, then it's back to optimizing our ${keyword1} setup. Let us know in the comments how you handle ${keyword2} in your routine!`,
+                `🌱 Just a casual day focusing on what matters most: simplifying ${keyword1} and sharing the journey of ${keyword2} with you all.`
+            ],
+            Bold: [
+                `🔥 Stop settling. Focus on ${keyword1} and dominate the market. ${capitalize(keyword2)} is the weapon, and ${keyword3} is the target. Let's build!`,
+                `⚡ Real results require bold action. We're doubling down on ${keyword1} and ignoring the noise. If you're not optimization-focused, you're falling behind.`,
+                `🚀 Disrupt the status quo. By combining aggressive ${keyword1} with state-of-the-art ${keyword2}, we're rewriting the playbook.`
+            ]
+        };
+
+        const templates = toneTemplates[tone] || toneTemplates.Exciting;
+
+        const tags = [];
+        tags.push(toHashtag(tone + "Vibes"));
+        tags.push(toHashtag(goal));
+        uniqueKeywords.slice(0, 4).forEach(k => {
+            tags.push(toHashtag(k));
+        });
+        
+        selectedPlatforms.forEach(p => {
+            tags.push(toHashtag(p + "Tips"));
+        });
+
+        const cleanTags = [...new Set(tags)]
+            .filter(t => t && t.length > 1)
+            .map(t => t.startsWith('#') ? t : `#${t}`);
+
+        let countToTake = 5;
+        if (hashtags === 'None') countToTake = 0;
+        else if (hashtags === '3-5') countToTake = 4;
+        else if (hashtags === '5-10') countToTake = 7;
+        else if (hashtags === '10+') countToTake = 12;
+
+        const generalTags = ["#SEO", "#Marketing", "#SocialMedia", "#ContentCreator", "#GrowOrganic", "#SuccessTips", "#Trending", "#Strategy", "#BrandBuilding", "#DigitalGrowth"];
+        const combinedTags = [...cleanTags];
+        for (const gt of generalTags) {
+            if (combinedTags.length >= countToTake) break;
+            if (!combinedTags.includes(gt)) {
+                combinedTags.push(gt);
+            }
+        }
+        
+        const finalTags = combinedTags.slice(0, countToTake);
 
         const list = [
             {
-                caption: `${prefix}Option A: ${baseTopics[0]}${suffix}`,
-                hashtags: [...tags, `#${platform}Growth`, `#${goal.replace(/\s+/g, '')}`]
+                caption: templates[0],
+                hashtags: finalTags
             },
             {
-                caption: `${prefix}Option B: ${baseTopics[1]}${suffix}`,
-                hashtags: [...tags, `#MaximizeReach`, `#${tone}Tone`]
+                caption: templates[1],
+                hashtags: finalTags
             },
             {
-                caption: `${prefix}Option C: ${baseTopics[2]}${suffix}`,
-                hashtags: [...tags, `#EngagementStrategy`, `#BuildPublic`]
+                caption: templates[2],
+                hashtags: finalTags
             }
         ];
 
@@ -340,11 +440,13 @@ You MUST return ONLY a valid JSON object matching the schema below. No markdown 
                                 </span>
                                 <span
                                     onClick={() => {
-                                        setApiKey('');
-                                        setTempKey('');
                                         localStorage.removeItem('gemini_api_key');
-                                        setUseMock(true);
-                                        toast.success('API Key cleared. Switched to Mock mode.');
+                                        const envKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+                                        setApiKey(envKey);
+                                        setTempKey(envKey);
+                                        setUseMock(!envKey);
+                                        setIsKeyEditing(!envKey);
+                                        toast.success(envKey ? 'API Key cleared. Using environment API key.' : 'API Key cleared. Switched to Mock mode.');
                                     }}
                                     style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600, cursor: 'pointer' }}
                                 >
@@ -377,24 +479,36 @@ You MUST return ONLY a valid JSON object matching the schema below. No markdown 
 
                 {/* 2. Platform optimization selector */}
                 <div>
-                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>TARGET PLATFORM</label>
+                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '6px' }}>TARGET PLATFORMS (SELECT MULTIPLE)</label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                        {['Instagram', 'Facebook', 'LinkedIn', 'Twitter'].map(plat => (
-                            <button
-                                key={plat}
-                                onClick={() => setPlatform(plat)}
-                                style={{
-                                    padding: '7px 4px', fontSize: '11px', fontWeight: 600,
-                                    border: '1px solid',
-                                    borderColor: platform === plat ? '#3b82f6' : '#e2e8f0',
-                                    background: platform === plat ? '#eff6ff' : 'white',
-                                    color: platform === plat ? '#2563eb' : '#475569',
-                                    borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s'
-                                }}
-                            >
-                                {plat}
-                            </button>
-                        ))}
+                        {['Instagram', 'Facebook', 'LinkedIn', 'Twitter'].map(plat => {
+                            const isSelected = selectedPlatforms.includes(plat);
+                            return (
+                                <button
+                                    key={plat}
+                                    onClick={() => {
+                                        setSelectedPlatforms(prev => {
+                                            if (prev.includes(plat)) {
+                                                if (prev.length === 1) return prev; // keep at least one selected
+                                                return prev.filter(p => p !== plat);
+                                            } else {
+                                                return [...prev, plat];
+                                            }
+                                        });
+                                    }}
+                                    style={{
+                                        padding: '7px 4px', fontSize: '11px', fontWeight: 600,
+                                        border: '1px solid',
+                                        borderColor: isSelected ? '#3b82f6' : '#e2e8f0',
+                                        background: isSelected ? '#eff6ff' : 'white',
+                                        color: isSelected ? '#2563eb' : '#475569',
+                                        borderRadius: '8px', cursor: 'pointer', transition: 'all 0.15s'
+                                    }}
+                                >
+                                    {plat}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -572,25 +686,29 @@ You MUST return ONLY a valid JSON object matching the schema below. No markdown 
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
                                         <button
-                                            onClick={() => applySuggestion(suggestion.caption, '')}
+                                            onClick={() => {
+                                                const tagsStr = suggestion.hashtags.join(' ');
+                                                applySuggestion(suggestion.caption, tagsStr, 'caption');
+                                                toast.success('Applied caption & hashtags!');
+                                            }}
                                             style={{
                                                 padding: '6px 8px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', transition: 'background 0.2s'
                                             }}
                                         >
-                                            Apply Caption
+                                            Apply Caption + Tags
                                         </button>
 
                                         <button
                                             onClick={() => {
                                                 const tagsStr = suggestion.hashtags.join(' ');
                                                 if (showFirstComment) {
-                                                    applySuggestion('', tagsStr);
+                                                    applySuggestion('', tagsStr, 'comment');
                                                     toast.success('Applied hashtags to First Comment!');
                                                 } else {
                                                     setShowFirstComment(true);
                                                     // Allow State render to commit
                                                     setTimeout(() => {
-                                                        applySuggestion('', tagsStr);
+                                                        applySuggestion('', tagsStr, 'comment');
                                                         toast.success('Opened & applied hashtags to First Comment!');
                                                     }, 50);
                                                 }
@@ -605,12 +723,15 @@ You MUST return ONLY a valid JSON object matching the schema below. No markdown 
 
                                     <div style={{ display: 'block', textAlign: 'center', marginTop: '2px' }}>
                                         <button
-                                            onClick={() => applySuggestion(suggestion.caption, suggestion.hashtags.join(' '))}
+                                            onClick={() => {
+                                                applySuggestion(suggestion.caption, '', 'caption');
+                                                toast.success('Applied caption only!');
+                                            }}
                                             style={{
                                                 background: 'transparent', border: 'none', color: '#6366f1', fontSize: '10px', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', padding: '2px 0'
                                             }}
                                         >
-                                            Apply both to Caption editor
+                                            Apply Caption only
                                         </button>
                                     </div>
                                 </div>

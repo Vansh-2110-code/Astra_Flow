@@ -164,3 +164,21 @@ export const deletePost = async (channelId, postId) => {
     const res = await api.delete(`/channels/${channelId}/posts/${postId}/`);
     return res.data;
 };
+
+/**
+ * Fetch real analytics for a single channel.
+ * Endpoint: GET /api/channels/{channelId}/analytics/?days={days}
+ */
+export const getChannelAnalytics = async (channelId, days = 30) => {
+    const res = await api.get(`/channels/${channelId}/analytics/`, { params: { days } });
+    return res.data;
+};
+
+/**
+ * Fetch aggregated analytics across all channels in a workspace.
+ * Endpoint: GET /api/workspaces/{workspaceId}/analytics/?days={days}
+ */
+export const getWorkspaceAnalytics = async (workspaceId, days = 30) => {
+    const res = await api.get(`/workspaces/${workspaceId}/analytics/`, { params: { days } });
+    return res.data;
+};

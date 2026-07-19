@@ -150,6 +150,10 @@ const Login = () => {
                 <Link to="/signup">Sign up</Link>
             </div>
 
+            <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem' }}>
+                <Link to="/privacy" style={{ color: 'var(--text-muted)', textDecoration: 'underline' }}>Privacy Policy</Link>
+            </div>
+
             {toast && (
                 <Toast
                     type={toast.type}

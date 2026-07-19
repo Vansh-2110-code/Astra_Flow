@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Image as ImageIcon, FileText, ChevronLeft, ChevronRight, X, StickyNote } from 'lucide-react';
+import { Plus, Image as ImageIcon, FileText, ChevronLeft, ChevronRight, X, StickyNote, Music } from 'lucide-react';
 
 const StoryTab = ({
     uploadedMedia,
@@ -10,7 +10,8 @@ const StoryTab = ({
     fileInputRef,
     setUploadedMedia,
     setShowStickersPanel,
-    isCarouselMode
+    isCarouselMode,
+    selectedTrack
 }) => {
     // Hidden if in Carousel Edit Mode (though technically stories don't use it, safety first)
     if (isCarouselMode) return null;
@@ -105,6 +106,22 @@ const StoryTab = ({
                                 <div key={idx} style={{ flex: 1, height: '3px', background: idx === currentMediaIndex ? 'white' : 'rgba(255,255,255,0.4)', borderRadius: '2px' }} />
                             ))}
                         </div>
+
+                        {/* Audio Track Sticker Overlay */}
+                        {selectedTrack && (
+                            <div style={{
+                                position: 'absolute', bottom: '52px', left: '16px',
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                color: 'white', fontSize: '11px', fontWeight: 500, zIndex: 10,
+                                background: 'rgba(0,0,0,0.6)', padding: '6px 10px', borderRadius: '16px',
+                                backdropFilter: 'blur(4px)', maxWidth: '80%'
+                            }}>
+                                <Music size={11} style={{ color: '#ec4899', animation: 'spin 4s linear infinite' }} />
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {selectedTrack.artist} • {selectedTrack.name}
+                                </span>
+                            </div>
+                        )}
 
                         {/* Add Stickers Button */}
                         <div

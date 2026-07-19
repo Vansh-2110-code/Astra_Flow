@@ -13,6 +13,7 @@ import Analytics from './pages/Analytics';
 import Team from './pages/Team';
 import Settings from './pages/Settings';
 import ProfileSettings from './pages/ProfileSettings';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import { getAccessToken } from './services/authService';
 
 function App() {
@@ -90,6 +91,8 @@ function App() {
               <ProfileSettings />
             </ProtectedRoute>
           } />
+
+          <Route path="/privacy" element={<PrivacyPolicy />} />
 
           {/* Root route - redirect based on auth status */}
           <Route path="/" element={

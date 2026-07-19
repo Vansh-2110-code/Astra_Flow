@@ -100,16 +100,6 @@
       "page_name": "My X Profile",
       "profile_picture": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150",
       "workspace_id": "ws-1e4685c1-6fde-4eca-9314-e0298e3e58b3"
-    },
-    {
-      "id": "chan-38b8cd45-a81c-49c8-ba8d-d0f28d3e4192",
-      "name": "Sanna Innovations",
-      "platform": "facebook",
-      "page_name": "Sanna Innovations",
-      "profile_picture": "https://scontent.fidr1-1.fna.fbcdn.net/v/t39.30808-1/299122544_426740432810724_4819515690851530181_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=108&ccb=1-7&_nc_sid=f907e8&_nc_ohc=b-i3b4FdZ0cQ7kNvwEruSeN&_nc_oc=Adp7_PQqEs3nfhByD8Jt-dfaPVVU0JjpM7MSKdcS0C9a_rtdAS3A-RAudgO4mrZ_AF7a2cv7BNDg0WnGlwmV84cS&_nc_zt=24&_nc_ht=scontent.fidr1-1.fna&edm=AOf6bZoEAAAA&_nc_gid=SC0gMJRocuwqrxeiF3f1yg&_nc_tpa=Q5bMBQH1OwOY0gpWSA30l-z4EJT2jVgZ05AMI2wN8lAZpGPr5qH2htGJ7Xqp6VTVXDPCh07jE4q8sc6T3w&oh=00_AQA6vxzIFV7fOVUEJvHTgHoeYei_KTOZ5gNE-qSPH6Qctg&oe=6A55352A",
-      "workspace_id": "ws-9ac60861-611d-4421-8313-be5b7b9cf24a",
-      "facebook_page_id": "332489403774446",
-      "access_token": "EAAV4WV4uqKsBRZCDPN6fNSduZAqcCvMe36E7Uniep9waZBLmFtIGGchio1ZA8L0H1BqyyWjjABZBx618qfzacON0Q9MCU5A2mZBpoFiJ1UTnAjdzrwvdXHx5OZBTkI1GjyBcxRWW6tsOFHrVmekjASx2tByCnOX5iTlZBmSPwYT5otbkQdaeiOR3dNluurFWXH0DRk7LErpQ"
     }
   ],
   "posts": {
@@ -146,6 +136,20 @@
       }
     ],
     "chan-e38f08f5-8390-4719-a7db-415bd8173907": [
+      {
+        "id": "post-53cb26a1-dfe7-42d8-b33b-dc0c99dea9ce",
+        "message": "Verification Test Story",
+        "scheduled_time": null,
+        "status": "draft",
+        "approved": false,
+        "approvedBy": [],
+        "created_at": "2026-07-16T04:41:34.206Z",
+        "media": [],
+        "comments": [],
+        "facebook_post_id": null,
+        "created_by": "Admin User",
+        "type": "story"
+      },
       {
         "id": "post-c8e6aa6a-485e-4395-a501-e4d431ce4464",
         "message": "Have a business? We have the strategy to help it grow.\r\nLet's turn your ideas into measurable results.\r\n\r\n(business strategy, digital marketing, business growth, branding, SEO services, social media marketing, Sanna Innovations)\r\n\r\n#BusinessGrowth #DigitalMarketing #BusinessStrategy #Branding #SEO #SocialMediaMarketing #SannaInnovations #MarketingAgency #GrowYourBusiness #DigitalSolutions",

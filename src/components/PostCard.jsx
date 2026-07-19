@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
 import Button from './ui/Button';
-import { MoreHorizontal, MessageSquare, Heart, CheckCircle, Plus, Check, Smile, Reply, Pencil, Trash2, Send, Clock, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MoreHorizontal, MessageSquare, Heart, CheckCircle, Plus, Check, Smile, Reply, Pencil, Trash2, Send, Clock, X, ChevronLeft, ChevronRight, Music } from 'lucide-react';
 import { Avatar, Tooltip, IconButton, Paper, Fade, Collapse, Chip, Typography, Box, Divider, Zoom, TextField, Button as MuiButton, Badge as MuiBadge, Popover, Menu, MenuItem } from '@mui/material';
 import { getAspectRatioStyles } from '../utils/mediaRules';
 
@@ -87,10 +87,46 @@ const PostMedia = ({ post, isMinimized }) => {
                 </>
             ) : (
                 isVideo ? (
-                    <video src={mediaUrl} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <video src={mediaUrl} poster={post.cover_url || undefined} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                     <img src={mediaUrl} alt="Post media" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 )
+            )}
+
+            {post.audio_track && (
+                <div style={{
+                    position: 'absolute',
+                    bottom: '12px',
+                    left: '12px',
+                    padding: '5px 10px',
+                    background: 'rgba(15, 23, 42, 0.75)',
+                    backdropFilter: 'blur(8px)',
+                    color: 'white',
+                    borderRadius: '20px',
+                    fontSize: '0.7rem',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    zIndex: 20,
+                    maxWidth: '85%',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}>
+                    <Music size={10} className="spinning-music-icon" style={{ color: '#ec4899' }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>
+                        {post.audio_track.artist} • {post.audio_track.name}
+                    </span>
+                    <style>{`
+                        @keyframes spin {
+                            from { transform: rotate(0deg); }
+                            to { transform: rotate(360deg); }
+                        }
+                        .spinning-music-icon {
+                            animation: spin 5s linear infinite;
+                        }
+                    `}</style>
+                </div>
             )}
 
             {isMinimized && (

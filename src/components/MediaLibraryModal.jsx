@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Image, Film, FileText, Search, Grid, List, Loader, Filter } from 'lucide-react';
 import api from '../services/api';
 
-const MediaLibraryModal = ({ isOpen, onClose, workspaceId }) => {
+const MediaLibraryModal = ({ isOpen, onClose, workspaceId, onSelect }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState('grid');
     const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'image', 'video'
@@ -155,7 +155,7 @@ const MediaLibraryModal = ({ isOpen, onClose, workspaceId }) => {
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '1rem 1.25rem', borderBottom: '1px solid var(--input-border)'
                 }}>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Media Library</h3>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>{onSelect ? 'Select from Media Library' : 'Media Library'}</h3>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
                         <X size={18} />
                     </button>
@@ -233,7 +233,8 @@ const MediaLibraryModal = ({ isOpen, onClose, workspaceId }) => {
 
                 {/* Content */}
                 <div style={{ flex: 1, overflow: 'auto', padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column' }}>
-                    {/* Upload zone */}
+                    {/* Upload zone — hidden in select mode */}
+                    {!onSelect && (
                     <div
                         onDragEnter={handleDrag}
                         onDragLeave={handleDrag}
@@ -260,6 +261,7 @@ const MediaLibraryModal = ({ isOpen, onClose, workspaceId }) => {
                             {uploading ? 'Uploading media...' : 'Drop files here or click to upload'}
                         </div>
                     </div>
+                    )}
 
                     {/* Media grid/list */}
                     {loading ? (
@@ -281,7 +283,14 @@ const MediaLibraryModal = ({ isOpen, onClose, workspaceId }) => {
                                         borderRadius: 8, border: '1px solid var(--input-border)', overflow: 'hidden',
                                         cursor: 'pointer', position: 'relative', height: 140
                                     }}
-                                    onClick={() => window.open(item.url, '_blank')}
+                                    onClick={() => {
+                                        if (onSelect) {
+                                            onSelect(item);
+                                            onClose();
+                                        } else {
+                                            window.open(item.url, '_blank');
+                                        }
+                                    }}
                                 >
                                     <div style={{
                                         height: 95, background: item.type === 'video' ? '#1e293b' : '#f8fafc',
@@ -313,7 +322,14 @@ const MediaLibraryModal = ({ isOpen, onClose, workspaceId }) => {
                                         cursor: 'pointer', border: '1px solid #f1f5f9',
                                         background: '#f8fafc'
                                     }}
-                                    onClick={() => window.open(item.url, '_blank')}
+                                    onClick={() => {
+                                        if (onSelect) {
+                                            onSelect(item);
+                                            onClose();
+                                        } else {
+                                            window.open(item.url, '_blank');
+                                        }
+                                    }}
                                 >
                                     <div style={{ color: item.type === 'video' ? '#6366f1' : '#64748b' }}>{getIcon(item.type)}</div>
                                     <div style={{ flex: 1, minWidth: 0 }}>

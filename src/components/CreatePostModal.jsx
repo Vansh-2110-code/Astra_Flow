@@ -16,6 +16,8 @@ import StoryTab from './tabs/StoryTab';
 import CarouselEditView from './tabs/CarouselEditView';
 import ReelsTab from './tabs/ReelsTab';
 import AIAssistantPanel from './AIAssistantPanel';
+import MediaLibraryModal from './MediaLibraryModal';
+import MusicLibraryModal from './MusicLibraryModal';
 
 const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSuccess, onPostCreated, prefilledDate }) => {
     const { workspaceId } = useParams();
@@ -24,6 +26,10 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
     const [postType, setPostType] = useState(initialTab);
     const [connectedApps, setConnectedApps] = useState([]);
     const [selectedAccounts, setSelectedAccounts] = useState([]);
+
+    // Music states
+    const [selectedTrack, setSelectedTrack] = useState(null);
+    const [showMusicLibrary, setShowMusicLibrary] = useState(false);
 
     // New UI states
     const [hoveredAccount, setHoveredAccount] = useState(null);
@@ -38,6 +44,9 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
     const [tempDate, setTempDate] = useState(new Date());
     const [isPublishing, setIsPublishing] = useState(false);
     const [showAIPanel, setShowAIPanel] = useState(false);
+    const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+    const [reelCover, setReelCover] = useState(null);
+    const [mediaLibraryTarget, setMediaLibraryTarget] = useState('media');
 
     const [hourInput, setHourInput] = useState('02');
     const [minuteInput, setMinuteInput] = useState('03');
@@ -55,7 +64,7 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
         }
     };
 
-    const applyAISuggestion = (newCaption, newHashtags) => {
+    const applyAISuggestion = (newCaption, newHashtags, targetForHashtags = 'comment') => {
         if (newCaption) {
             setCaption(prev => {
                 if (prev) {
@@ -65,12 +74,21 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
             });
         }
         if (newHashtags) {
-            setFirstComment(prev => {
-                if (prev) {
-                    return prev + ' ' + newHashtags;
-                }
-                return newHashtags;
-            });
+            if (targetForHashtags === 'caption') {
+                setCaption(prev => {
+                    if (prev) {
+                        return prev + '\n\n' + newHashtags;
+                    }
+                    return newHashtags;
+                });
+            } else {
+                setFirstComment(prev => {
+                    if (prev) {
+                        return prev + ' ' + newHashtags;
+                    }
+                    return newHashtags;
+                });
+            }
         }
     };
 
@@ -240,6 +258,33 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
         });
     };
 
+    const handleMediaLibrarySelect = (item) => {
+        if (mediaLibraryTarget === 'cover') {
+            setReelCover({
+                id: Date.now() + Math.random(),
+                file: null, // No file object — this is a server-hosted URL
+                url: item.url,
+                fromLibrary: true,
+                libraryItem: item,
+            });
+            setShowMediaLibrary(false);
+            return;
+        }
+
+        // item from the media library has: { id, url, type, name, ... }
+        // Map type: 'image' -> 'image/jpeg' prefix, 'video' -> 'video/mp4' prefix for compatibility
+        const mimeType = item.type === 'video' ? 'video/mp4' : 'image/jpeg';
+        const newMedia = {
+            id: Date.now() + Math.random(),
+            file: null, // No file object — this is a server-hosted URL
+            url: item.url,
+            type: mimeType,
+            fromLibrary: true,
+            libraryItem: item,
+        };
+        setUploadedMedia(prev => [...prev, newMedia]);
+    };
+
     const handlePublish = async () => {
         if (isPublishing) return;
 
@@ -286,6 +331,7 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                     payload.append('post_type', 'image');
                     payload.append('message', caption);
                     payload.append('created_by', creatorName);
+                    payload.append('content_type', postType.toLowerCase());
 
                     // Add scheduled_time if in any future/scheduled action
                     // Spec 4.2 requires ISO format: 2026-03-03T08:40:00Z
@@ -294,26 +340,55 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                         payload.append('scheduled_time', isoString);
                     }
 
-                    uploadedMedia.forEach(media => {
-                        const isVideo = media.type?.startsWith('video/') ||
-                            media.file?.name?.toLowerCase().endsWith('.mp4') ||
-                            media.file?.name?.toLowerCase().endsWith('.mov');
+                    // Build the media files array — library items need to be fetched as blobs first
+                    const mediaFiles = await Promise.all(uploadedMedia.map(async (media) => {
+                        if (media.fromLibrary && !media.file) {
+                            // Fetch the server-hosted file as a blob
+                            const resp = await fetch(media.url);
+                            const blob = await resp.blob();
+                            const filename = media.libraryItem?.name || 'media_file';
+                            return { file: new File([blob], filename, { type: blob.type }), type: media.type };
+                        }
+                        return { file: media.file, type: media.type };
+                    }));
+
+                    mediaFiles.forEach(({ file, type }) => {
+                        const isVideo = type?.startsWith('video/') ||
+                            file?.name?.toLowerCase().endsWith('.mp4') ||
+                            file?.name?.toLowerCase().endsWith('.mov');
 
                         // Spec 4.3: Multiple 'image' fields for carousel
                         // Spec 4.4: 'video' key for video
-                        payload.append(isVideo ? 'video' : 'image', media.file);
+                        payload.append(isVideo ? 'video' : 'image', file);
                     });
+
+                    if (postType.toLowerCase() === 'reels' && reelCover) {
+                        if (reelCover.file) {
+                            payload.append('cover', reelCover.file);
+                        } else if (reelCover.url) {
+                            payload.append('cover_url', reelCover.url);
+                        }
+                    }
+
+                    if (selectedTrack) {
+                        payload.append('audio_track', JSON.stringify(selectedTrack));
+                    }
                 } else {
                     // Spec 4.1: Text Post (Standard JSON)
                     payload = {
                         post_type: 'text',
                         message: caption,
-                        created_by: creatorName
+                        created_by: creatorName,
+                        content_type: postType.toLowerCase()
                     };
 
                     // Scheduled time for text post
                     if (selectedDate) {
                         payload.scheduled_time = selectedDate.toISOString().split('.')[0] + 'Z';
+                    }
+
+                    if (selectedTrack) {
+                        payload.audio_track = selectedTrack;
                     }
                 }
 
@@ -323,8 +398,10 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
             // Success reset
             setCaption('');
             setUploadedMedia([]);
+            setReelCover(null);
             setCurrentMediaIndex(0);
             setIsCarouselMode(false);
+            setSelectedTrack(null);
 
             // Show toast message based on action
             if (selectedDate) {
@@ -535,6 +612,7 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
     };
 
     return (
+        <>
         <div style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000,
             overflowY: 'auto', display: 'flex', padding: '4rem 1rem',
@@ -562,10 +640,14 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
 
                 {/* Main Modal Container */}
                 <div style={{
-                    width: '100%', minWidth: '540px', maxWidth: '540px', background: 'white', borderRadius: '14px',
+                    width: '100%',
+                    minWidth: postType === 'Reels' && uploadedMedia.length > 0 ? '620px' : '540px',
+                    maxWidth: postType === 'Reels' && uploadedMedia.length > 0 ? '620px' : '540px',
+                    background: 'white', borderRadius: '14px',
                     boxShadow: '0 25px 60px rgba(0, 0, 0, 0.15)', position: 'relative',
                     display: 'flex', flexDirection: 'column', overflow: 'visible',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                    transition: 'all 0.2s ease-in-out'
                 }}>
 
                     {/* Hidden File Input for Image/Video Upload */}
@@ -759,6 +841,7 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                                 setUploadedMedia={setUploadedMedia}
                                 setShowStickersPanel={setShowStickersPanel}
                                 isCarouselMode={isCarouselMode}
+                                selectedTrack={selectedTrack}
                             />
                         )}
 
@@ -770,6 +853,11 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                                 setCurrentMediaIndex={setCurrentMediaIndex}
                                 setUploadedMedia={setUploadedMedia}
                                 fileInputRef={fileInputRef}
+                                reelCover={reelCover}
+                                setReelCover={setReelCover}
+                                setMediaLibraryTarget={setMediaLibraryTarget}
+                                setShowMediaLibrary={setShowMediaLibrary}
+                                selectedTrack={selectedTrack}
                             />
                         )}
 
@@ -815,6 +903,32 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                                     )}
                                 </div>
                             )}
+
+                            {/* Attached Music track preview badge */}
+                            {selectedTrack && (
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '8px 12px', background: '#ec48990a', border: '1px solid #ec489920',
+                                    borderRadius: '10px', marginTop: '16px', fontSize: '13px'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#db2777' }}>
+                                        <Music size={14} className="spinning-music-icon" />
+                                        <span style={{ fontWeight: 600 }}>{selectedTrack.artist}</span>
+                                        <span style={{ opacity: 0.7 }}>-</span>
+                                        <span style={{ fontWeight: 500 }}>{selectedTrack.name}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedTrack(null)}
+                                        style={{
+                                            border: 'none', background: 'none', cursor: 'pointer',
+                                            color: '#94a3b8', display: 'flex', alignItems: 'center'
+                                        }}
+                                        title="Remove track"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* First Comment Area */}
@@ -850,7 +964,7 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                                         <div onClick={() => fileInputRef.current?.click()} style={{ padding: '8px', color: '#6b7280', cursor: 'pointer', borderRadius: '6px' }} ><ImageIcon size={18} strokeWidth={2} /></div>
                                     </TooltipWrapper>
                                     <TooltipWrapper id="folder" title="Media Library">
-                                        <div style={{ padding: '8px', color: '#6b7280', cursor: 'pointer', borderRadius: '6px' }} ><Folder size={18} strokeWidth={2} /></div>
+                                        <div onClick={() => setShowMediaLibrary(true)} style={{ padding: '8px', color: '#6b7280', cursor: 'pointer', borderRadius: '6px' }} ><Folder size={18} strokeWidth={2} /></div>
                                     </TooltipWrapper>
 
                                     <TooltipWrapper id="comment" title="First Comment">
@@ -881,6 +995,25 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                             )}
                             <TooltipWrapper id="location" title="Add location">
                                 <div style={{ padding: '8px', color: '#6b7280', cursor: 'pointer', borderRadius: '6px' }} ><MapPin size={18} strokeWidth={2} /></div>
+                            </TooltipWrapper>
+
+                            <TooltipWrapper id="music" title={selectedTrack ? `Music: ${selectedTrack.artist} - ${selectedTrack.name}` : "Add music/audio"}>
+                                <div
+                                    onClick={() => setShowMusicLibrary(true)}
+                                    style={{
+                                        padding: '8px',
+                                        color: selectedTrack ? '#ec4899' : '#6b7280',
+                                        cursor: 'pointer',
+                                        borderRadius: '6px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        background: selectedTrack ? '#ec48991a' : 'transparent',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    <Music size={18} strokeWidth={2} />
+                                    {selectedTrack && <span style={{ fontSize: '10px', fontWeight: 600, paddingLeft: '4px' }}>1</span>}
+                                </div>
                             </TooltipWrapper>
 
                             <div ref={emojiPickerRef} style={{ position: 'relative' }}>
@@ -1215,6 +1348,21 @@ const CreatePostModal = ({ isOpen, onClose, initialTab = 'Post', onPublishSucces
                 )}
             </div>
         </div>
+        {/* Media Library Picker Modal */}
+        <MediaLibraryModal
+            isOpen={showMediaLibrary}
+            onClose={() => setShowMediaLibrary(false)}
+            workspaceId={workspaceId}
+            onSelect={handleMediaLibrarySelect}
+        />
+        {/* Music Library Picker Modal */}
+        <MusicLibraryModal
+            isOpen={showMusicLibrary}
+            onClose={() => setShowMusicLibrary(false)}
+            onSelect={(track) => setSelectedTrack(track)}
+            currentSelectedTrackId={selectedTrack?.id}
+        />
+        </>
     );
 };
 

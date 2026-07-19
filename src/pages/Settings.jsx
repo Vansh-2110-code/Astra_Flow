@@ -153,14 +153,15 @@ const Settings = () => {
         }
         if (id === 'instagram') {
             try {
-                await initiateInstagramLogin(workspaceId, redirectUri);
+                // Instagram must be connected via Facebook OAuth under Meta's updated API guidelines
+                await initiateFacebookLogin(workspaceId, redirectUri);
             } catch (error) {
-                console.error('Failed to initiate Instagram login:', error);
+                console.error('Failed to initiate Instagram login via Facebook:', error);
                 setToast({
                     type: 'error',
-                    message: 'Failed to connect Instagram. Please try again.'
+                    message: 'Failed to connect Instagram. Please link your Facebook account first.'
                 });
-                setTimeout(() => setToast(null), 4000);
+                setTimeout(() => setToast(null), 5000);
             }
             return;
         }
@@ -776,7 +777,7 @@ const Settings = () => {
                                                     style={{ marginTop: '1rem', width: '100%', fontSize: '0.85rem' }}
                                                     onClick={() => toggleIntegration(app.id)}
                                                 >
-                                                    {isSocial ? 'Link Account' : (connected ? 'Disconnect' : 'Connect')}
+                                                    {app.id === 'instagram' ? 'Link via Facebook' : (isSocial ? 'Link Account' : (connected ? 'Disconnect' : 'Connect'))}
                                                 </Button>
                                             )}
                                         </Card>

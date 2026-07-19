@@ -83,7 +83,7 @@ const PostMedia = ({ post, isMinimized }) => {
                 </>
             ) : (
                 isVideo ? (
-                    <video src={mediaUrl} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <video src={mediaUrl} poster={post.cover_url || undefined} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                     <img src={mediaUrl} alt="Post media" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 )
